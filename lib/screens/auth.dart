@@ -53,7 +53,6 @@ class _AuthScreenState extends State<AuthScreen> {
               ),
             ),
             ElevatedButton(onPressed: () => {}, child: const Text('Login')),
-            Text('nigga wtff'),
           ],
         ),
       ),
