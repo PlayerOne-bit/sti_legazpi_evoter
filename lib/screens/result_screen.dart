@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../data/mock.dart';
-import '../components/centered_body.dart';
-import '../../theme.dart';
+import '../data/mock.dart';
+import '../widgets/centered_body.dart';
+import '../theme.dart';
 
 class ResultScreen extends StatelessWidget {
   const ResultScreen({super.key});
@@ -15,7 +15,7 @@ class ResultScreen extends StatelessWidget {
         builder: (context, _) => ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            Text('${state.club}, ${state.schoolYear}', style: const TextStyle(color: C.muted)),
+            Text(state.electionLabel, style: const TextStyle(color: C.muted)),
             const SizedBox(height: 16),
             for (final p in state.positions) ...[
               Text(p.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),

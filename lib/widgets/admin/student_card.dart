@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 import '../../data/mock.dart';
 import '../../theme.dart';
 
+/// One row of the student list. Swap this widget when the table design changes.
+/// [onDelete] is only offered for students who have not voted.
 class StudentCard extends StatelessWidget {
   final Student student;
-  const StudentCard({super.key, required this.student});
+  final VoidCallback? onDelete;
+  const StudentCard({super.key, required this.student, this.onDelete});
 
   @override
   Widget build(BuildContext context) {
     final v = student.hasVoted;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
       decoration: cardBox(),
       child: Row(
         children: [
@@ -24,9 +27,10 @@ class StudentCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(student.fullName, style: const TextStyle(fontWeight: FontWeight.w700)),
+                Text(student.fullName,
+                    maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
                 Text('${student.studentNum}, Grade ${student.gradeLevel}',
-                    style: const TextStyle(color: C.muted, fontSize: 13)),
+                    maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: C.muted, fontSize: 13)),
               ],
             ),
           ),
@@ -39,6 +43,20 @@ class StudentCard extends StatelessWidget {
             child: Text(v ? 'Voted' : 'Not yet',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: v ? C.ok : C.muted)),
           ),
+          if (v)
+            const Tooltip(
+              message: 'Students who voted cannot be deleted',
+              child: Padding(
+                padding: EdgeInsets.all(12),
+                child: Icon(Icons.lock_outline, color: C.muted, size: 22),
+              ),
+            )
+          else
+            IconButton(
+              tooltip: 'Delete student',
+              icon: const Icon(Icons.delete_outline),
+              onPressed: onDelete,
+            ),
         ],
       ),
     );

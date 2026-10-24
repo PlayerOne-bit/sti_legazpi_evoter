@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../shared/components/centered_body.dart';
-import '../../shared/pages/auth.dart';
+import '../../widgets/centered_body.dart';
+import '../auth.dart';
 import 'candidate_manager.dart';
 import 'dashboard.dart';
 import 'history_manager.dart';
+import 'season_manager.dart';
 import 'student_manager.dart';
 
 class AdminShell extends StatefulWidget {
@@ -15,8 +16,14 @@ class AdminShell extends StatefulWidget {
 
 class _AdminShellState extends State<AdminShell> {
   int i = 0;
-  static const titles = ['Dashboard', 'Students', 'Candidates', 'History'];
-  static const pages = [DashboardPage(), StudentManagerPage(), CandidateManagerPage(), HistoryManagerPage()];
+  static const titles = ['Dashboard', 'Seasons', 'Students', 'Candidates', 'History'];
+  static const pages = [
+    DashboardPage(),
+    SeasonManagerPage(),
+    StudentManagerPage(),
+    CandidateManagerPage(),
+    HistoryManagerPage(),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +56,7 @@ class _AdminShellState extends State<AdminShell> {
                       backgroundColor: Colors.white,
                       destinations: const [
                         NavigationRailDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: Text('Dashboard')),
+                        NavigationRailDestination(icon: Icon(Icons.event_note_outlined), selectedIcon: Icon(Icons.event_note), label: Text('Seasons')),
                         NavigationRailDestination(icon: Icon(Icons.groups_outlined), selectedIcon: Icon(Icons.groups), label: Text('Students')),
                         NavigationRailDestination(icon: Icon(Icons.badge_outlined), selectedIcon: Icon(Icons.badge), label: Text('Candidates')),
                         NavigationRailDestination(icon: Icon(Icons.history), label: Text('History')),
@@ -66,6 +74,7 @@ class _AdminShellState extends State<AdminShell> {
                   onDestinationSelected: (v) => setState(() => i = v),
                   destinations: const [
                     NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Dashboard'),
+                    NavigationDestination(icon: Icon(Icons.event_note_outlined), selectedIcon: Icon(Icons.event_note), label: 'Seasons'),
                     NavigationDestination(icon: Icon(Icons.groups_outlined), selectedIcon: Icon(Icons.groups), label: 'Students'),
                     NavigationDestination(icon: Icon(Icons.badge_outlined), selectedIcon: Icon(Icons.badge), label: 'Candidates'),
                     NavigationDestination(icon: Icon(Icons.history), label: 'History'),

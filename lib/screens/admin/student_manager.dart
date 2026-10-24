@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../data/mock.dart';
 import '../../theme.dart';
-import '../components/student_card.dart';
+import '../../widgets/admin/student_card.dart';
+import '../../widgets/admin/student_form.dart';
 
+/// Student list: create, read (search + two tabs), delete (not for students who voted).
 class StudentManagerPage extends StatefulWidget {
   const StudentManagerPage({super.key});
 
@@ -12,6 +14,24 @@ class StudentManagerPage extends StatefulWidget {
 
 class _StudentManagerPageState extends State<StudentManagerPage> {
   String q = '';
+
+  Future<void> _delete(Student s) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete ${s.fullName}?'),
+        content: const Text('This removes the student from the voter list and cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete student')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final err = state.deleteStudent(s.id);
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(err ?? '${s.fullName} was deleted.')));
+  }
 
   Widget _list(List<Student> list, String emptyMsg) {
     if (list.isEmpty) {
@@ -25,7 +45,10 @@ class _StudentManagerPageState extends State<StudentManagerPage> {
     }
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-      children: [for (final s in list) StudentCard(student: s)],
+      children: [
+        for (final s in list)
+          StudentCard(student: s, onDelete: s.hasVoted ? null : () => _delete(s)),
+      ],
     );
   }
 
@@ -45,12 +68,29 @@ class _StudentManagerPageState extends State<StudentManagerPage> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-                child: TextField(
-                  decoration: const InputDecoration(
-                    hintText: 'Search by name or student number',
-                    prefixIcon: Icon(Icons.search),
-                  ),
-                  onChanged: (v) => setState(() => q = v),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        decoration: const InputDecoration(
+                          hintText: 'Search by name or student number',
+                          prefixIcon: Icon(Icons.search),
+                        ),
+                        onChanged: (v) => setState(() => q = v),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    IconButton.filled(
+                      tooltip: 'Add student',
+                      style: IconButton.styleFrom(
+                        backgroundColor: C.blue,
+                        minimumSize: const Size(52, 52),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.person_add),
+                      onPressed: () => showStudentForm(context),
+                    ),
+                  ],
                 ),
               ),
               TabBar(

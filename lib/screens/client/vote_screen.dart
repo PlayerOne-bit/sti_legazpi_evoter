@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../data/mock.dart';
-import '../../shared/components/blue_button.dart';
-import '../../shared/components/centered_body.dart';
+import '../../widgets/blue_button.dart';
+import '../../widgets/centered_body.dart';
 import '../../theme.dart';
-import '../components/candidate_card.dart';
-import '../components/vote_stepper.dart';
+import '../../widgets/client/candidate_card.dart';
+import '../../widgets/client/vote_stepper.dart';
 
 class VoteScreen extends StatefulWidget {
   const VoteScreen({super.key});

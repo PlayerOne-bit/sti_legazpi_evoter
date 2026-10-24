@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../theme.dart';
+import '../theme.dart';
 
 class BlueButton extends StatelessWidget {
   final String label;

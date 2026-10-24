@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../data/mock.dart';
-import '../../shared/components/blue_button.dart';
+import '../../widgets/blue_button.dart';
 import '../../theme.dart';
 
 class CandidateManagerPage extends StatelessWidget {

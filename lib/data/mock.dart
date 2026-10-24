@@ -16,7 +16,7 @@ class Student {
   Student(this.id, this.studentNum, this.fullName, this.gradeLevel, {this.hasVoted = false});
 
   String get initials {
-    final p = fullName.split(' ');
+    final p = fullName.trim().split(RegExp(r'\s+'));
     return (p.first[0] + p.last[0]).toUpperCase();
   }
 }
@@ -34,7 +34,7 @@ class Candidate {
       {this.motto = '', this.imageUrl});
 
   String get initials {
-    final p = name.split(' ');
+    final p = name.trim().split(RegExp(r'\s+'));
     return (p.first[0] + p.last[0]).toUpperCase();
   }
 }
@@ -61,17 +61,44 @@ class Season {
   double get turnout => totalVoters == 0 ? 0 : votedCount / totalVoters;
 }
 
+enum ElectionStatus { upcoming, open, ended }
+
+/// A scheduled or running voting season. Admins can create as many as they need.
+class Election {
+  final int id;
+  String schoolYear;
+  String club;
+  DateTime startDate;
+  DateTime endDate;
+  Election(this.id, this.schoolYear, this.club, this.startDate, this.endDate);
+
+  ElectionStatus get status {
+    final now = DateTime.now();
+    if (now.isBefore(startDate)) return ElectionStatus.upcoming;
+    if (now.isBefore(endDate)) return ElectionStatus.open;
+    return ElectionStatus.ended;
+  }
+}
+
 class AppState extends ChangeNotifier {
+  /// The signed-in student in this prototype.
+  static const meId = 1;
+
   bool isAdmin = false;
   bool hasVoted = false;
-  String schoolYear = '2026-2027';
-  String club = 'Student Council';
-  DateTime startDate = DateTime.now().subtract(const Duration(hours: 6));
-  DateTime endDate = DateTime.now().add(const Duration(days: 2, hours: 5, minutes: 30));
   final Map<int, int> selections = {}; // positionId -> candidateId
 
   final List<String> schoolYears = ['2025-2026', '2026-2027', '2027-2028'];
   final List<String> clubs = ['Student Council', 'Computer Society', 'Business Club'];
+
+  final List<Election> elections = [
+    Election(1, '2026-2027', 'Student Council', DateTime.now().subtract(const Duration(hours: 6)),
+        DateTime.now().add(const Duration(days: 2, hours: 5, minutes: 30))),
+    Election(2, '2026-2027', 'Computer Society', DateTime.now().add(const Duration(days: 5, hours: 3)),
+        DateTime.now().add(const Duration(days: 7, hours: 3))),
+    Election(3, '2026-2027', 'Business Club', DateTime.now().add(const Duration(days: 12)),
+        DateTime.now().add(const Duration(days: 14))),
+  ];
 
   final List<Position> positions = const [
     Position(1, 'President', 1),
@@ -125,7 +152,129 @@ class AppState extends ChangeNotifier {
     ]),
   ];
 
-  Duration get remaining => endDate.difference(DateTime.now());
+  // ---------- seasons ----------
+
+  /// The season voters can vote in right now.
+  Election? get activeElection {
+    for (final e in elections) {
+      if (e.status == ElectionStatus.open) return e;
+    }
+    return null;
+  }
+
+  /// Seasons whose voting time is over but have not been tallied and closed yet.
+  List<Election> get pendingTally =>
+      elections.where((e) => e.status == ElectionStatus.ended).toList();
+
+  /// The soonest season that has not started yet.
+  Election? get nextElection {
+    final list = elections.where((e) => e.status == ElectionStatus.upcoming).toList()
+      ..sort((a, b) => a.startDate.compareTo(b.startDate));
+    return list.isEmpty ? null : list.first;
+  }
+
+  Election? get focusElection =>
+      activeElection ?? (pendingTally.isNotEmpty ? pendingTally.first : nextElection);
+
+  String get electionLabel {
+    final e = focusElection;
+    return e == null ? '' : '${e.club}, ${e.schoolYear}';
+  }
+
+  /// Re-notify listeners (used when a countdown reaches zero and a status changes).
+  void touch() => notifyListeners();
+
+  /// Creates a season (id == null) or updates one. Returns an error message, or null on success.
+  String? saveElection({
+    int? id,
+    required String schoolYear,
+    required String club,
+    required DateTime start,
+    required DateTime end,
+  }) {
+    final name = club.trim();
+    if (name.isEmpty) return 'Enter a club name.';
+    if (!end.isAfter(start)) return 'The closing time must be after the opening time.';
+    final dup = elections.any((e) =>
+            e.id != id && e.club.toLowerCase() == name.toLowerCase() && e.schoolYear == schoolYear) ||
+        history.any((s) => s.club.toLowerCase() == name.toLowerCase() && s.schoolYear == schoolYear);
+    if (dup) return '$name already has a season for $schoolYear.';
+    if (id == null) {
+      final nextId = elections.isEmpty ? 1 : elections.map((e) => e.id).reduce((a, b) => a > b ? a : b) + 1;
+      elections.add(Election(nextId, schoolYear, name, start, end));
+    } else {
+      final e = elections.firstWhere((x) => x.id == id);
+      e.schoolYear = schoolYear;
+      e.club = name;
+      e.startDate = start;
+      e.endDate = end;
+    }
+    if (!clubs.any((c) => c.toLowerCase() == name.toLowerCase())) clubs.add(name);
+    notifyListeners();
+    return null;
+  }
+
+  /// Only seasons that have not started can be deleted.
+  String? deleteElection(int id) {
+    final e = elections.firstWhere((x) => x.id == id);
+    if (e.status != ElectionStatus.upcoming) return 'Only upcoming seasons can be deleted.';
+    elections.remove(e);
+    notifyListeners();
+    return null;
+  }
+
+  /// Saves the season's winners to history, removes it, and clears the ballot box for the next season.
+  void closeSeason(Election e) {
+    final winners = <SeasonWinner>[];
+    for (final p in positions) {
+      if (candidatesFor(p.id).isEmpty) continue;
+      final w = winnerFor(p.id);
+      winners.add(SeasonWinner(p.title, w.name, w.partyList, votesFor(w.id)));
+    }
+    history.insert(0, Season(e.schoolYear, e.club, e.startDate, e.endDate, students.length, votedCount, winners));
+    elections.removeWhere((x) => x.id == e.id);
+    tally.clear();
+    selections.clear();
+    hasVoted = false;
+    for (final s in students) {
+      s.hasVoted = false;
+    }
+    notifyListeners();
+  }
+
+  // ---------- students ----------
+
+  Student? get me {
+    for (final s in students) {
+      if (s.id == meId) return s;
+    }
+    return null;
+  }
+
+  int get votedCount => students.where((s) => s.hasVoted).length;
+
+  /// Returns an error message, or null on success.
+  String? addStudent({required String studentNum, required String fullName, required int gradeLevel}) {
+    final num = studentNum.trim();
+    final name = fullName.trim();
+    if (num.isEmpty || name.isEmpty) return 'Enter the student number and full name.';
+    if (students.any((s) => s.studentNum == num)) return 'A student with that number already exists.';
+    final id = students.isEmpty ? 1 : students.map((s) => s.id).reduce((a, b) => a > b ? a : b) + 1;
+    students.add(Student(id, num, name, gradeLevel));
+    notifyListeners();
+    return null;
+  }
+
+  /// Students who already voted cannot be deleted. Returns an error message, or null on success.
+  String? deleteStudent(int id) {
+    final s = students.firstWhere((x) => x.id == id);
+    if (s.hasVoted) return 'Students who already voted cannot be deleted.';
+    students.remove(s);
+    notifyListeners();
+    return null;
+  }
+
+  // ---------- candidates and voting ----------
 
   List<Candidate> candidatesFor(int positionId) =>
       candidates.where((c) => c.positionId == positionId).toList();
@@ -141,8 +290,6 @@ class AppState extends ChangeNotifier {
     return list.first;
   }
 
-  int get votedCount => students.where((s) => s.hasVoted).length;
-
   void select(int positionId, int candidateId) {
     selections[positionId] = candidateId;
     notifyListeners();
@@ -153,19 +300,7 @@ class AppState extends ChangeNotifier {
       tally[cid] = votesFor(cid) + 1;
     }
     hasVoted = true;
-    students.first.hasVoted = true;
-    notifyListeners();
-  }
-
-  void setSchedule({DateTime? start, DateTime? end}) {
-    if (start != null) startDate = start;
-    if (end != null) endDate = end;
-    notifyListeners();
-  }
-
-  void setElection({String? year, String? clubName}) {
-    if (year != null) schoolYear = year;
-    if (clubName != null) club = clubName;
+    me?.hasVoted = true;
     notifyListeners();
   }
 
@@ -184,18 +319,6 @@ class AppState extends ChangeNotifier {
 
   void removeCandidate(int id) {
     candidates.removeWhere((c) => c.id == id);
-    notifyListeners();
-  }
-
-  /// Closes the current election and stores it as a finished season.
-  void saveToHistory() {
-    final winners = <SeasonWinner>[];
-    for (final p in positions) {
-      if (candidatesFor(p.id).isEmpty) continue;
-      final w = winnerFor(p.id);
-      winners.add(SeasonWinner(p.title, w.name, w.partyList, votesFor(w.id)));
-    }
-    history.insert(0, Season(schoolYear, club, startDate, endDate, students.length, votedCount, winners));
     notifyListeners();
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../data/mock.dart';
-import '../components/history_card.dart';
+import '../../widgets/admin/history_card.dart';
 import 'season_screen.dart';
 
 class HistoryManagerPage extends StatelessWidget {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../data/mock.dart';
-import '../../shared/components/centered_body.dart';
+import '../../widgets/centered_body.dart';
 import '../../theme.dart';
 
 /// Details of one finished season (opened from History).

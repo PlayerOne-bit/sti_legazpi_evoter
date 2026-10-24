@@ -1,60 +1,125 @@
 import 'package:flutter/material.dart';
+import 'admin/admin_shell.dart';
+import 'client/home.dart';
+import '../data/mock.dart';
+import '../theme.dart';
+import '../widgets/blue_button.dart';
 
-export 'auth.dart';
-
-class AuthScreen extends StatefulWidget {
-  const AuthScreen({super.key, required this.title});
-  final String title;
+class AuthPage extends StatefulWidget {
+  const AuthPage({super.key});
 
   @override
-  State<AuthScreen> createState() => _AuthScreenState();
+  State<AuthPage> createState() => _AuthPageState();
 }
 
-class _AuthScreenState extends State<AuthScreen> {
+class _AuthPageState extends State<AuthPage> {
+  bool admin = false;
+  bool hide = true;
+  final _user = TextEditingController();
+  final _pass = TextEditingController();
+
+  void _submit() {
+    state.isAdmin = admin;
+    Navigator.of(context).pushReplacement(MaterialPageRoute(
+      builder: (_) => admin ? const AdminShell() : const ClientHome(),
+    ));
+  }
+
+  Widget _brand({bool large = false}) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(width: 44, height: 5, color: C.yellow),
+          const SizedBox(height: 18),
+          Text('STI eVoter',
+              style: TextStyle(color: Colors.white, fontSize: large ? 56 : 36, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          Text('Vote from your phone. No paper ballots, no waiting in line.',
+              style: TextStyle(color: Colors.white70, fontSize: large ? 18 : 15, height: 1.4)),
+        ],
+      );
+
+  Widget _form() => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SegmentedButton<bool>(
+            segments: const [
+              ButtonSegment(value: false, label: Text('Student')),
+              ButtonSegment(value: true, label: Text('Admin')),
+            ],
+            selected: {admin},
+            onSelectionChanged: (s) => setState(() => admin = s.first),
+          ),
+          const SizedBox(height: 20),
+          TextField(
+            controller: _user,
+            textInputAction: TextInputAction.next,
+            decoration: InputDecoration(labelText: admin ? 'Username' : 'Student number'),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _pass,
+            obscureText: hide,
+            onSubmitted: (_) => _submit(),
+            decoration: InputDecoration(
+              labelText: 'Password',
+              suffixIcon: IconButton(
+                icon: Icon(hide ? Icons.visibility_off : Icons.visibility),
+                onPressed: () => setState(() => hide = !hide),
+              ),
+            ),
+          ),
+          const SizedBox(height: 22),
+          BlueButton(label: 'Sign in', onPressed: _submit),
+          const SizedBox(height: 14),
+          const Text('Prototype: any credentials work.',
+              textAlign: TextAlign.center, style: TextStyle(color: C.muted)),
+        ],
+      );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Row(children: [Icon(Icons.home), Text(widget.title)]),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('Login', style: Theme.of(context).textTheme.headlineMedium),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: 8.0,
-                horizontal: 16.0,
-              ),
-              child: TextField(
-                decoration: InputDecoration(
-                  labelText: 'Student Number',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.0),
+      body: LayoutBuilder(
+        builder: (context, c) {
+          // PC or landscape: brand panel on the left, form on the right
+          if (c.maxWidth >= 720) {
+            return Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    color: C.navy,
+                    padding: const EdgeInsets.all(48),
+                    alignment: Alignment.centerLeft,
+                    child: _brand(large: c.maxWidth >= 1000),
                   ),
                 ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: 8.0,
-                horizontal: 16.0,
-              ),
-              child: TextField(
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.0),
+                Expanded(
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(32),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 420),
+                        child: _form(),
+                      ),
+                    ),
                   ),
                 ),
-                obscureText: true,
+              ],
+            );
+          }
+          return ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              Container(
+                color: C.navy,
+                padding: const EdgeInsets.fromLTRB(24, 72, 24, 36),
+                child: _brand(),
               ),
-            ),
-            ElevatedButton(onPressed: () => {}, child: const Text('Login')),
-          ],
-        ),
+              Padding(padding: const EdgeInsets.all(24), child: _form()),
+            ],
+          );
+        },
       ),
     );
   }

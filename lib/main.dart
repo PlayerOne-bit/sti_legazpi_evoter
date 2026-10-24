@@ -1,6 +1,6 @@
 import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/material.dart';
-import 'shared/pages/auth.dart';
+import 'screens/auth.dart';
 import 'theme.dart';
 
 void main() => runApp(const EVoterApp());

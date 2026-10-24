@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../data/mock.dart';
-import '../../shared/components/blue_button.dart';
-import '../../shared/components/centered_body.dart';
+import '../../widgets/blue_button.dart';
+import '../../widgets/centered_body.dart';
 import '../../theme.dart';
 
 class WinnerScreen extends StatelessWidget {
-  const WinnerScreen({super.key});
+  final Election election;
+  const WinnerScreen({super.key, required this.election});
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +15,7 @@ class WinnerScreen extends StatelessWidget {
       body: CenteredBody(maxWidth: 800, child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
         children: [
-          Text('${state.club}, ${state.schoolYear}', style: const TextStyle(color: C.muted)),
+          Text('${election.club}, ${election.schoolYear}', style: const TextStyle(color: C.muted)),
           const SizedBox(height: 16),
           for (final p in state.positions)
             if (state.candidatesFor(p.id).isNotEmpty) _WinnerTile(p),
@@ -27,7 +28,7 @@ class WinnerScreen extends StatelessWidget {
             label: 'Close season and save to history',
             icon: Icons.save_alt,
             onPressed: () {
-              state.saveToHistory();
+              state.closeSeason(election);
               ScaffoldMessenger.of(context)
                   .showSnackBar(const SnackBar(content: Text('Season saved to history.')));
               Navigator.of(context).pop();
