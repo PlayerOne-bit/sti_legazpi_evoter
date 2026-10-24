@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import '../../data/mock.dart';
 import '../../theme.dart';
 
-class CandidateCard extends StatefulWidget {
+/// Grid tile: portrait, name, party list, motto.
+/// [selectable] shows the check badge when [selected]. [onInfo] shows an info button.
+class CandidateCard extends StatelessWidget {
   final Candidate candidate;
   final bool selectable;
   final bool selected;
   final VoidCallback? onTap;
+  final VoidCallback? onInfo;
 
   const CandidateCard({
     super.key,
@@ -14,71 +17,149 @@ class CandidateCard extends StatefulWidget {
     this.selectable = false,
     this.selected = false,
     this.onTap,
+    this.onInfo,
   });
 
-  @override
-  State<CandidateCard> createState() => _CandidateCardState();
-}
+  Widget _initials(Candidate c) => Container(
+        color: c.color,
+        alignment: Alignment.center,
+        child: Text(c.initials,
+            style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.w800)),
+      );
 
-class _CandidateCardState extends State<CandidateCard> {
-  bool open = false;
+  Widget _portrait(Candidate c) {
+    final url = c.imageUrl;
+    if (url == null) return _initials(c);
+    return Image.network(url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _initials(c));
+  }
 
   @override
   Widget build(BuildContext context) {
-    final c = widget.candidate;
-    final sel = widget.selected;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: widget.selectable ? widget.onTap : () => setState(() => open = !open),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: sel ? const Color(0xFFEAF1FB) : Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: sel ? C.blue : C.line, width: sel ? 2 : 1),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+    final c = candidate;
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFEAF1FB) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: selected ? C.blue : C.line, width: selected ? 2.5 : 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    _portrait(c),
+                    if (selectable && selected)
+                      const Positioned(
+                        top: 8,
+                        left: 8,
+                        child: CircleAvatar(
+                          radius: 14,
+                          backgroundColor: C.blue,
+                          child: Icon(Icons.check, size: 18, color: Colors.white),
+                        ),
+                      ),
+                    if (onInfo != null)
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: InkWell(
+                          onTap: onInfo,
+                          customBorder: const CircleBorder(),
+                          child: const Padding(
+                            padding: EdgeInsets.all(2),
+                            child: CircleAvatar(
+                              radius: 14,
+                              backgroundColor: Colors.white,
+                              child: Icon(Icons.info_outline, size: 18, color: C.blue),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    radius: 26,
-                    backgroundColor: c.color,
-                    child: Text(c.initials,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(c.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 2),
-                        Text(c.partyList, style: const TextStyle(color: C.muted)),
-                      ],
-                    ),
-                  ),
-                  if (widget.selectable)
-                    Icon(sel ? Icons.check_circle : Icons.radio_button_unchecked,
-                        color: sel ? C.blue : C.line, size: 28)
-                  else
-                    Icon(open ? Icons.expand_less : Icons.expand_more, color: C.muted),
+                  Text(c.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                  Text(c.partyList,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: C.muted, fontSize: 12)),
+                  if (c.motto.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text('\u201C${c.motto}\u201D',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, height: 1.3)),
+                  ],
                 ],
               ),
-              if (!widget.selectable && open) ...[
-                const SizedBox(height: 12),
-                const Divider(height: 1, color: C.line),
-                const SizedBox(height: 12),
-                Text(c.vision, style: const TextStyle(height: 1.5)),
-              ],
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
+}
+
+void showCandidateSheet(BuildContext context, Candidate c) {
+  showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    backgroundColor: Colors.white,
+    isScrollControlled: true,
+    builder: (_) => Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: c.color,
+                child: Text(c.initials,
+                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(c.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                    Text(c.partyList, style: const TextStyle(color: C.muted)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (c.motto.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text('\u201C${c.motto}\u201D',
+                style: const TextStyle(fontSize: 16, fontStyle: FontStyle.italic)),
+          ],
+          const SizedBox(height: 16),
+          const Text('Vision', style: TextStyle(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 6),
+          Text(c.vision, style: const TextStyle(height: 1.5)),
+        ],
+      ),
+    ),
+  );
 }

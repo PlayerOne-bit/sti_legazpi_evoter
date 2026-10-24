@@ -1,48 +1,76 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../data/mock.dart';
 import '../../shared/components/blue_button.dart';
+import '../../shared/components/centered_body.dart';
 import '../../theme.dart';
 import '../components/candidate_card.dart';
+import '../components/vote_stepper.dart';
 
-class VoteScreen extends StatelessWidget {
+class VoteScreen extends StatefulWidget {
   const VoteScreen({super.key});
 
-  Future<void> _review(BuildContext context) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Submit your ballot?'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final p in state.positions)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text.rich(TextSpan(children: [
-                  TextSpan(text: '${p.title}: ', style: const TextStyle(color: C.muted)),
-                  TextSpan(
-                    text: state.candidates.firstWhere((c) => c.id == state.selections[p.id]).name,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ])),
-              ),
-            const SizedBox(height: 6),
-            const Text('You cannot change your vote after submitting.', style: TextStyle(color: C.muted)),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Go back')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Submit ballot')),
-        ],
-      ),
-    );
-    if (ok == true && context.mounted) {
-      state.submitVote();
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Ballot submitted. Thanks for voting.')));
-      Navigator.of(context).pop();
+  @override
+  State<VoteScreen> createState() => _VoteScreenState();
+}
+
+class _VoteScreenState extends State<VoteScreen> {
+  final _pc = PageController();
+  int page = 0;
+
+  List<Position> get _ps =>
+      state.positions.where((p) => state.candidatesFor(p.id).isNotEmpty).toList();
+
+  bool _chosen(int i) => state.selections.containsKey(_ps[i].id);
+
+  /// A step is reachable only when every earlier position has a choice.
+  bool _canGoTo(int i) {
+    for (int j = 0; j < i && j < _ps.length; j++) {
+      if (!_chosen(j)) return false;
     }
+    return true;
+  }
+
+  void _go(int i) => _pc.animateToPage(i,
+      duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
+
+  void _onPageChanged(int i) {
+    if (i > page && !_canGoTo(i)) {
+      _go(page);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Choose your ${_ps[page].title} first.')),
+      );
+      return;
+    }
+    setState(() => page = i);
+  }
+
+  void _submit() {
+    state.submitVote();
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Ballot submitted. Thanks for voting.')));
+    Navigator.of(context).pop();
+  }
+
+  // PC: left and right arrow keys move between positions
+  KeyEventResult _onKey(FocusNode node, KeyEvent e) {
+    if (e is! KeyDownEvent) return KeyEventResult.ignored;
+    final lastIndex = _ps.length;
+    if (e.logicalKey == LogicalKeyboardKey.arrowRight && page < lastIndex && _chosen(page)) {
+      _go(page + 1);
+      return KeyEventResult.handled;
+    }
+    if (e.logicalKey == LogicalKeyboardKey.arrowLeft && page > 0) {
+      _go(page - 1);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  @override
+  void dispose() {
+    _pc.dispose();
+    super.dispose();
   }
 
   @override
@@ -50,40 +78,186 @@ class VoteScreen extends StatelessWidget {
     return ListenableBuilder(
       listenable: state,
       builder: (context, _) {
-        final done = state.positions.every((p) => state.selections.containsKey(p.id));
-        return Scaffold(
-          appBar: AppBar(title: const Text('Your ballot')),
-          body: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-            children: [
-              const Text('Pick one candidate for each position.', style: TextStyle(color: C.muted)),
-              const SizedBox(height: 16),
-              for (final p in state.positions) ...[
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10, top: 6),
-                  child: Text(p.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-                ),
-                for (final c in state.candidatesFor(p.id))
-                  CandidateCard(
-                    candidate: c,
-                    selectable: true,
-                    selected: state.selections[p.id] == c.id,
-                    onTap: () => state.select(p.id, c.id),
+        final ps = _ps;
+        final isLast = page == ps.length;
+        return Focus(
+          autofocus: true,
+          onKeyEvent: _onKey,
+          child: Scaffold(
+            appBar: AppBar(title: const Text('Your ballot')),
+            body: CenteredBody(
+              maxWidth: 1040,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                    child: VoteStepper(
+                      labels: [...ps.map((p) => p.title), 'Submit'],
+                      current: page,
+                      canGoTo: _canGoTo,
+                      onTap: _go,
+                    ),
                   ),
-              ],
-            ],
-          ),
-          bottomNavigationBar: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-              child: BlueButton(
-                label: done ? 'Review ballot' : 'Choose a candidate for every position',
-                onPressed: done ? () => _review(context) : null,
+                  const Divider(height: 1, color: C.line),
+                  Expanded(
+                    child: PageView(
+                      controller: _pc,
+                      onPageChanged: _onPageChanged,
+                      children: [
+                        for (final p in ps) _PositionPage(position: p),
+                        _ReviewPage(positions: ps, onChange: _go),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            bottomNavigationBar: SafeArea(
+              child: CenteredBody(
+                maxWidth: 1040,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                  child: Row(
+                    children: [
+                      if (page > 0) ...[
+                        SizedBox(
+                          width: 56,
+                          height: 52,
+                          child: OutlinedButton(
+                            onPressed: () => _go(page - 1),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: Size.zero,
+                              padding: EdgeInsets.zero,
+                              foregroundColor: C.blue,
+                              side: const BorderSide(color: C.blue, width: 1.5),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            child: const Icon(Icons.arrow_back),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
+                      Expanded(
+                        child: isLast
+                            ? BlueButton(label: 'Submit ballot', icon: Icons.how_to_vote, onPressed: _submit)
+                            : BlueButton(
+                                label: _chosen(page) ? 'Next' : 'Choose a candidate',
+                                icon: _chosen(page) ? Icons.arrow_forward : null,
+                                onPressed: _chosen(page) ? () => _go(page + 1) : null,
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
         );
       },
+    );
+  }
+}
+
+class _PositionPage extends StatelessWidget {
+  final Position position;
+  const _PositionPage({required this.position});
+
+  @override
+  Widget build(BuildContext context) {
+    // Header scrolls with the grid so short landscape screens still have room.
+    // Columns adapt: 2 on phones, 3 to 4 on tablets, landscape and PC.
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Choose your ${position.title}',
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 2),
+                const Text('Tap a card, then swipe left or press Next.',
+                    style: TextStyle(color: C.muted)),
+              ],
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+          sliver: SliverGrid(
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 230,
+              mainAxisExtent: 300,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+            ),
+            delegate: SliverChildListDelegate([
+              for (final c in state.candidatesFor(position.id))
+                CandidateCard(
+                  candidate: c,
+                  selectable: true,
+                  selected: state.selections[position.id] == c.id,
+                  onTap: () => state.select(position.id, c.id),
+                  onInfo: () => showCandidateSheet(context, c),
+                ),
+            ]),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReviewPage extends StatelessWidget {
+  final List<Position> positions;
+  final ValueChanged<int> onChange;
+  const _ReviewPage({required this.positions, required this.onChange});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      children: [
+        const Text('Review your ballot', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 2),
+        const Text('You cannot change your vote after submitting.', style: TextStyle(color: C.muted)),
+        const SizedBox(height: 16),
+        for (int i = 0; i < positions.length; i++)
+          Builder(builder: (context) {
+            final p = positions[i];
+            final id = state.selections[p.id];
+            final c = id == null ? null : state.candidates.firstWhere((x) => x.id == id);
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: cardBox(),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: c?.color ?? C.line,
+                    child: Text(c?.initials ?? '?',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(p.title, style: const TextStyle(color: C.muted, fontSize: 12)),
+                        Text(c?.name ?? 'No choice yet',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                        if (c != null) Text(c.partyList, style: const TextStyle(color: C.muted, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                  TextButton(onPressed: () => onChange(i), child: const Text('Change')),
+                ],
+              ),
+            );
+          }),
+      ],
     );
   }
 }

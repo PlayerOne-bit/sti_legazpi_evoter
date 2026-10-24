@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/mock.dart';
 import '../../shared/components/blue_button.dart';
+import '../../shared/components/centered_body.dart';
 import '../../shared/pages/auth.dart';
 import '../../shared/pages/result_screen.dart';
 import '../../theme.dart';
@@ -31,7 +32,7 @@ class ClientHome extends StatelessWidget {
               ),
             ],
           ),
-          body: ListView(
+          body: CenteredBody(maxWidth: 1000, child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
             children: [
               Text('${state.club} election, ${state.schoolYear}',
@@ -80,10 +81,23 @@ class ClientHome extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 10, top: 6),
                   child: Text(p.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                 ),
-                for (final c in state.candidatesFor(p.id)) CandidateCard(candidate: c),
+                GridView(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 230,
+                    mainAxisExtent: 300,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                  ),
+                  children: [
+                    for (final c in state.candidatesFor(p.id))
+                      CandidateCard(candidate: c, onTap: () => showCandidateSheet(context, c)),
+                  ],
+                ),
               ],
             ],
-          ),
+          )),
         );
       },
     );

@@ -28,7 +28,10 @@ class Candidate {
   final String partyList;
   final String vision;
   final Color color;
-  const Candidate(this.id, this.positionId, this.name, this.partyList, this.vision, this.color);
+  final String motto;
+  final String? imageUrl; // later: photo URL from the backend
+  const Candidate(this.id, this.positionId, this.name, this.partyList, this.vision, this.color,
+      {this.motto = '', this.imageUrl});
 
   String get initials {
     final p = name.split(' ');
@@ -36,13 +39,26 @@ class Candidate {
   }
 }
 
-class HistoryEntry {
+class SeasonWinner {
+  final String position;
+  final String name;
+  final String partyList;
+  final int votes;
+  const SeasonWinner(this.position, this.name, this.partyList, this.votes);
+}
+
+/// One finished voting season (an Election that has been closed).
+class Season {
   final String schoolYear;
   final String club;
-  final String position;
-  final String winner;
-  final int voteCount;
-  const HistoryEntry(this.schoolYear, this.club, this.position, this.winner, this.voteCount);
+  final DateTime startDate;
+  final DateTime endDate;
+  final int totalVoters;
+  final int votedCount;
+  final List<SeasonWinner> winners;
+  Season(this.schoolYear, this.club, this.startDate, this.endDate, this.totalVoters, this.votedCount, this.winners);
+
+  double get turnout => totalVoters == 0 ? 0 : votedCount / totalVoters;
 }
 
 class AppState extends ChangeNotifier {
@@ -65,17 +81,17 @@ class AppState extends ChangeNotifier {
 
   final List<Candidate> candidates = [
     const Candidate(1, 1, 'Mika Dela Cruz', 'Team Alab',
-        'Free printing hours at the library, a student-run lost and found, and monthly open forums with the administration.', Color(0xFF0A4DA2)),
+        'Free printing hours at the library, a student-run lost and found, and monthly open forums with the administration.', Color(0xFF0A4DA2), motto: 'Your voice, our campus.'),
     const Candidate(2, 1, 'Jericho Ramos', 'Bagong Sigla',
-        'Move club fairs to Fridays, expand the tutoring program, and publish the council budget every term.', Color(0xFFB4501E)),
+        'Move club fairs to Fridays, expand the tutoring program, and publish the council budget every term.', Color(0xFFB4501E), motto: 'Open books, open doors.'),
     const Candidate(3, 2, 'Aira Villanueva', 'Team Alab',
-        'A mentorship pairing between senior and first-year students, plus a council hotline for concerns.', Color(0xFF1E8E5A)),
+        'A mentorship pairing between senior and first-year students, plus a council hotline for concerns.', Color(0xFF1E8E5A), motto: 'No one walks alone.'),
     const Candidate(4, 2, 'Paolo Mercado', 'Bagong Sigla',
-        'Sports and esports leagues for every department, with equipment sign-out at the council office.', Color(0xFF7A3FB5)),
+        'Sports and esports leagues for every department, with equipment sign-out at the council office.', Color(0xFF7A3FB5), motto: 'Every department plays.'),
     const Candidate(5, 3, 'Trisha Reyes', 'Team Alab',
-        'Meeting minutes posted within 24 hours and a single calendar for every student event.', Color(0xFFC2185B)),
+        'Meeting minutes posted within 24 hours and a single calendar for every student event.', Color(0xFFC2185B), motto: 'Clear records, clear minds.'),
     const Candidate(6, 3, 'Kenji Santos', 'Bagong Sigla',
-        'A digital suggestion box answered weekly and a clear record of every approved proposal.', Color(0xFF00838F)),
+        'A digital suggestion box answered weekly and a clear record of every approved proposal.', Color(0xFF00838F), motto: 'Every idea gets an answer.'),
   ];
 
   final List<Student> students = [
@@ -93,10 +109,20 @@ class AppState extends ChangeNotifier {
 
   final Map<int, int> tally = {1: 31, 2: 24, 3: 27, 4: 28, 5: 33, 6: 22};
 
-  final List<HistoryEntry> history = [
-    const HistoryEntry('2025-2026', 'Student Council', 'President', 'Andrea Cruz', 142),
-    const HistoryEntry('2025-2026', 'Student Council', 'Vice President', 'Luis Garcia', 128),
-    const HistoryEntry('2025-2026', 'Computer Society', 'President', 'Noel Tan', 63),
+  final List<Season> history = [
+    Season('2025-2026', 'Computer Society', DateTime(2026, 3, 2, 8), DateTime(2026, 3, 4, 17), 60, 48, const [
+      SeasonWinner('President', 'Noel Tan', 'Team Byte', 31),
+      SeasonWinner('Secretary', 'Kris Lopez', 'Team Byte', 27),
+    ]),
+    Season('2025-2026', 'Student Council', DateTime(2026, 2, 10, 8), DateTime(2026, 2, 12, 17), 180, 142, const [
+      SeasonWinner('President', 'Andrea Cruz', 'Team Alab', 77),
+      SeasonWinner('Vice President', 'Luis Garcia', 'Bagong Sigla', 70),
+      SeasonWinner('Secretary', 'Joy Mendoza', 'Team Alab', 81),
+    ]),
+    Season('2024-2025', 'Student Council', DateTime(2025, 2, 11, 8), DateTime(2025, 2, 13, 17), 165, 121, const [
+      SeasonWinner('President', 'Rico Velasco', 'Bagong Sigla', 64),
+      SeasonWinner('Vice President', 'Ana Robles', 'Bagong Sigla', 59),
+    ]),
   ];
 
   Duration get remaining => endDate.difference(DateTime.now());
@@ -148,10 +174,11 @@ class AppState extends ChangeNotifier {
     required String name,
     required String partyList,
     required String vision,
+    String motto = '',
   }) {
     const palette = [Color(0xFF0A4DA2), Color(0xFFB4501E), Color(0xFF1E8E5A), Color(0xFF7A3FB5), Color(0xFFC2185B), Color(0xFF00838F)];
     final id = candidates.isEmpty ? 1 : candidates.map((c) => c.id).reduce((a, b) => a > b ? a : b) + 1;
-    candidates.add(Candidate(id, positionId, name, partyList, vision, palette[id % palette.length]));
+    candidates.add(Candidate(id, positionId, name, partyList, vision, palette[id % palette.length], motto: motto));
     notifyListeners();
   }
 
@@ -160,12 +187,15 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Closes the current election and stores it as a finished season.
   void saveToHistory() {
+    final winners = <SeasonWinner>[];
     for (final p in positions) {
       if (candidatesFor(p.id).isEmpty) continue;
       final w = winnerFor(p.id);
-      history.insert(0, HistoryEntry(schoolYear, club, p.title, w.name, votesFor(w.id)));
+      winners.add(SeasonWinner(p.title, w.name, w.partyList, votesFor(w.id)));
     }
+    history.insert(0, Season(schoolYear, club, startDate, endDate, students.length, votedCount, winners));
     notifyListeners();
   }
 }

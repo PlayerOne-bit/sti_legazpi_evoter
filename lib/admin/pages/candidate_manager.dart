@@ -10,6 +10,7 @@ class CandidateManagerPage extends StatelessWidget {
     final name = TextEditingController();
     final party = TextEditingController();
     final vision = TextEditingController();
+    final motto = TextEditingController();
     int pos = state.positions.first.id;
     await showDialog<void>(
       context: context,
@@ -31,6 +32,8 @@ class CandidateManagerPage extends StatelessWidget {
                 const SizedBox(height: 12),
                 TextField(controller: party, decoration: const InputDecoration(labelText: 'Party list')),
                 const SizedBox(height: 12),
+                TextField(controller: motto, decoration: const InputDecoration(labelText: 'Motto')),
+                const SizedBox(height: 12),
                 TextField(
                   controller: vision,
                   maxLines: 3,
@@ -49,6 +52,7 @@ class CandidateManagerPage extends StatelessWidget {
                   name: name.text.trim(),
                   partyList: party.text.trim(),
                   vision: vision.text.trim(),
+                  motto: motto.text.trim(),
                 );
                 Navigator.pop(ctx);
               },

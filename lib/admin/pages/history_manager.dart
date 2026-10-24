@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/mock.dart';
 import '../components/history_card.dart';
+import 'season_screen.dart';
 
 class HistoryManagerPage extends StatelessWidget {
   const HistoryManagerPage({super.key});
@@ -15,9 +16,14 @@ class HistoryManagerPage extends StatelessWidget {
           if (state.history.isEmpty)
             const Padding(
               padding: EdgeInsets.all(24),
-              child: Center(child: Text('No past elections yet. Winners are saved here after you tally.')),
+              child: Center(child: Text('No finished seasons yet. Close an election and it will appear here.')),
             ),
-          for (final h in state.history) HistoryCard(entry: h),
+          for (final s in state.history)
+            HistoryCard(
+              season: s,
+              onTap: () => Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => SeasonScreen(season: s))),
+            ),
         ],
       ),
     );

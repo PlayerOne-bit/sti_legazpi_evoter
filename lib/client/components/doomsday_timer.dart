@@ -78,7 +78,7 @@ class _Unit extends StatelessWidget {
         Text(value,
             style: TextStyle(
               color: hot ? C.yellow : Colors.white,
-              fontSize: 44,
+              fontSize: MediaQuery.sizeOf(context).width >= 700 ? 64 : 44,
               fontWeight: FontWeight.w800,
               fontFeatures: const [FontFeature.tabularFigures()],
             )),

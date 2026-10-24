@@ -56,3 +56,5 @@ BoxDecoration cardBox({Color color = Colors.white, Color border = C.line}) => Bo
       borderRadius: BorderRadius.circular(14),
       border: Border.all(color: border),
     );
+
+String fmtDay(DateTime d) => '${_months[d.month - 1]} ${d.day}, ${d.year}';

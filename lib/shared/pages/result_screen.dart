@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../data/mock.dart';
+import '../components/centered_body.dart';
 import '../../theme.dart';
 
 class ResultScreen extends StatelessWidget {
@@ -9,7 +10,7 @@ class ResultScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Live tally')),
-      body: ListenableBuilder(
+      body: CenteredBody(maxWidth: 800, child: ListenableBuilder(
         listenable: state,
         builder: (context, _) => ListView(
           padding: const EdgeInsets.all(20),
@@ -32,7 +33,7 @@ class ResultScreen extends StatelessWidget {
             ],
           ],
         ),
-      ),
+      )),
     );
   }
 }
