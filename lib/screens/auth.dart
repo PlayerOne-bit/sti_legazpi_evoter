@@ -57,7 +57,7 @@ class _AuthPageState extends State<AuthPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Image.asset(
-            'assets/logo.jpe', // path from the project root, not from this file
+            'assets/logo.jpg', // path from the project root, not from this file
             height: large ? 90 : 64,
             errorBuilder: (_, __, ___) =>
                 const SizedBox.shrink(), // no red screen if the file is missing
@@ -65,7 +65,7 @@ class _AuthPageState extends State<AuthPage> {
           const SizedBox(height: 18),
           Container(width: 44, height: 5, color: C.yellow),
           const SizedBox(height: 18),
-          Text('STI eVoter',
+          Text('STI Legazpi eVoter',
               style: TextStyle(
                   color: Colors.white,
                   fontSize: large ? 56 : 36,

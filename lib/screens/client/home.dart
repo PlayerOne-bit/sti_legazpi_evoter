@@ -176,7 +176,7 @@ class _ClientHomeState extends State<ClientHome> {
                     style:
                         TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 4),
-                const Text('Tap a card to read their vision.',
+                const Text('Tap a card to see more.',
                     style: TextStyle(color: C.muted)),
                 const SizedBox(height: 16),
                 for (final p in state.positions) ...[

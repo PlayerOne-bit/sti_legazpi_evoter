@@ -20,7 +20,9 @@ class StudentCard extends StatelessWidget {
         children: [
           CircleAvatar(
             backgroundColor: const Color(0xFFE3ECF8),
-            child: Text(student.initials, style: const TextStyle(color: C.blue, fontWeight: FontWeight.w800)),
+            child: Text(student.initials,
+                style: const TextStyle(
+                    color: C.blue, fontWeight: FontWeight.w800)),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -28,9 +30,16 @@ class StudentCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(student.fullName,
-                    maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
-                Text('${student.studentNum}, ${state.gradeName(student.gradeLevelId)}',
-                    maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: C.muted, fontSize: 13)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                Text(
+                  '${student.studentNum}, ${state.gradeName(student.gradeLevelId)}'
+                  '${student.programCode == null ? '' : ', ${student.programCode}'}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: C.muted, fontSize: 13),
+                ),
               ],
             ),
           ),
@@ -41,7 +50,10 @@ class StudentCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(v ? 'Voted' : 'Not yet',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: v ? C.ok : C.muted)),
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: v ? C.ok : C.muted)),
           ),
           if (v)
             const Tooltip(

@@ -24,13 +24,17 @@ class CandidateCard extends StatelessWidget {
         color: c.color,
         alignment: Alignment.center,
         child: Text(c.initials,
-            style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.w800)),
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 40,
+                fontWeight: FontWeight.w800)),
       );
 
   Widget _portrait(Candidate c) {
     final url = c.imageUrl;
     if (url == null) return _initials(c);
-    return Image.network(url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _initials(c));
+    return Image.network(url,
+        fit: BoxFit.cover, errorBuilder: (_, __, ___) => _initials(c));
   }
 
   @override
@@ -44,14 +48,16 @@ class CandidateCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? const Color(0xFFEAF1FB) : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: selected ? C.blue : C.line, width: selected ? 2.5 : 1),
+          border: Border.all(
+              color: selected ? C.blue : C.line, width: selected ? 2.5 : 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(13)),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -63,7 +69,8 @@ class CandidateCard extends StatelessWidget {
                         child: CircleAvatar(
                           radius: 14,
                           backgroundColor: C.blue,
-                          child: Icon(Icons.check, size: 18, color: Colors.white),
+                          child:
+                              Icon(Icons.check, size: 18, color: Colors.white),
                         ),
                       ),
                     if (onInfo != null)
@@ -78,7 +85,8 @@ class CandidateCard extends StatelessWidget {
                             child: CircleAvatar(
                               radius: 14,
                               backgroundColor: Colors.white,
-                              child: Icon(Icons.info_outline, size: 18, color: C.blue),
+                              child: Icon(Icons.info_outline,
+                                  size: 18, color: C.blue),
                             ),
                           ),
                         ),
@@ -95,7 +103,8 @@ class CandidateCard extends StatelessWidget {
                   Text(c.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w800)),
                   Text(c.partyList,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -105,7 +114,10 @@ class CandidateCard extends StatelessWidget {
                     Text('\u201C${c.motto}\u201D',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, height: 1.3)),
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontStyle: FontStyle.italic,
+                            height: 1.3)),
                   ],
                 ],
               ),
@@ -135,14 +147,19 @@ void showCandidateSheet(BuildContext context, Candidate c) {
                 radius: 30,
                 backgroundColor: c.color,
                 child: Text(c.initials,
-                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800)),
               ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(c.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                    Text(c.name,
+                        style: const TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.w800)),
                     Text(c.partyList, style: const TextStyle(color: C.muted)),
                   ],
                 ),
@@ -152,12 +169,9 @@ void showCandidateSheet(BuildContext context, Candidate c) {
           if (c.motto.isNotEmpty) ...[
             const SizedBox(height: 16),
             Text('\u201C${c.motto}\u201D',
-                style: const TextStyle(fontSize: 16, fontStyle: FontStyle.italic)),
+                style:
+                    const TextStyle(fontSize: 16, fontStyle: FontStyle.italic)),
           ],
-          const SizedBox(height: 16),
-          const Text('Vision', style: TextStyle(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 6),
-          Text(c.vision, style: const TextStyle(height: 1.5)),
         ],
       ),
     ),

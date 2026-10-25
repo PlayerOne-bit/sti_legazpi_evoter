@@ -17,7 +17,6 @@ class _CandidateManagerPageState extends State<CandidateManagerPage> {
     final numCtl = TextEditingController();
     final party = TextEditingController();
     final motto = TextEditingController();
-    final vision = TextEditingController();
     int? pos =
         state.adminPositions.isEmpty ? null : state.adminPositions.first.id;
     String? error;
@@ -59,12 +58,6 @@ class _CandidateManagerPageState extends State<CandidateManagerPage> {
                   TextField(
                       controller: motto,
                       decoration: const InputDecoration(labelText: 'Motto')),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: vision,
-                    maxLines: 3,
-                    decoration: const InputDecoration(labelText: 'Vision'),
-                  ),
                   if (error != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 10),
@@ -91,7 +84,6 @@ class _CandidateManagerPageState extends State<CandidateManagerPage> {
                   positionId: pos!,
                   partyList: party.text,
                   motto: motto.text,
-                  vision: vision.text,
                 );
                 if (err != null) {
                   setS(() => error = err);

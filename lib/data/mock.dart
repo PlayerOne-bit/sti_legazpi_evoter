@@ -11,7 +11,15 @@ class Position {
 class GradeLevel {
   final int id;
   final String name;
-  const GradeLevel(this.id, this.name);
+  final bool tertiary;
+  const GradeLevel(this.id, this.name, {this.tertiary = false});
+}
+
+class Program {
+  final int id;
+  final String code;
+  final String name;
+  const Program(this.id, this.code, this.name);
 }
 
 const _palette = [
@@ -34,11 +42,15 @@ class Student {
   final String studentNum;
   final String fullName;
   final int gradeLevelId;
-  final bool
-      hasVoted; // in the current season (or any season when none is current)
-  final bool canDelete; // false once voted or when a candidate
+  final bool hasVoted;
+  final bool canDelete;
+  final int? programId;
+  final String? programCode;
   const Student(this.id, this.studentNum, this.fullName, this.gradeLevelId,
-      {this.hasVoted = false, this.canDelete = true});
+      {this.hasVoted = false,
+      this.canDelete = true,
+      this.programId,
+      this.programCode});
   String get initials => _initials(fullName);
 }
 
@@ -47,13 +59,12 @@ class Candidate {
   final int positionId;
   final String name;
   final String partyList;
-  final String vision;
   final Color color;
   final String motto;
   final String? imageUrl;
   final String studentNum;
-  const Candidate(this.id, this.positionId, this.name, this.partyList,
-      this.vision, this.color,
+  const Candidate(
+      this.id, this.positionId, this.name, this.partyList, this.color,
       {this.motto = '', this.imageUrl, this.studentNum = ''});
   String get initials => _initials(name);
 }
@@ -152,13 +163,8 @@ ClientElection? _clientElection(dynamic j) => j == null
     : ClientElection(j['id'], j['club'], j['schoolYear'],
         parseUtc(j['startDate']), parseUtc(j['endDate']), j['audience']);
 
-Candidate _candidate(dynamic c, {String studentNum = ''}) => Candidate(
-    c['id'],
-    c['positionId'],
-    c['name'],
-    c['partyList'] ?? '',
-    c['vision'] ?? '',
-    colorFor(c['id']),
+Candidate _candidate(dynamic c, {String studentNum = ''}) => Candidate(c['id'],
+    c['positionId'], c['name'], c['partyList'] ?? '', colorFor(c['id']),
     motto: c['motto'] ?? '',
     imageUrl: Api.absUrl(c['imageUrl']),
     studentNum: studentNum);
@@ -181,10 +187,10 @@ class AppState extends ChangeNotifier {
     GradeLevel(4, 'Grade 10'),
     GradeLevel(5, 'Grade 11'),
     GradeLevel(6, 'Grade 12'),
-    GradeLevel(7, 'Tertiary Year 1'),
-    GradeLevel(8, 'Tertiary Year 2'),
-    GradeLevel(9, 'Tertiary Year 3'),
-    GradeLevel(10, 'Tertiary Year 4'),
+    GradeLevel(7, 'Tertiary Year 1', tertiary: true),
+    GradeLevel(8, 'Tertiary Year 2', tertiary: true),
+    GradeLevel(9, 'Tertiary Year 3', tertiary: true),
+    GradeLevel(10, 'Tertiary Year 4', tertiary: true),
   ];
   final List<String> schoolYears = ['2025-2026', '2026-2027', '2027-2028'];
   final List<String> clubs = [
@@ -300,6 +306,7 @@ class AppState extends ChangeNotifier {
   List<Election> elections = [];
   List<Season> history = [];
   List<Student> students = [];
+  List<Program> programs = [];
   int dashEligible = 0;
   int dashVoted = 0;
 
@@ -315,11 +322,13 @@ class AppState extends ChangeNotifier {
         Api.get('/api/admin/elections'),
         Api.get('/api/admin/history'),
         Api.get('/api/admin/clubs'),
+        Api.get('/api/admin/programs'),
       ]);
       final d = r[0];
       Api.syncFrom(d['serverTime']);
       dashEligible = d['eligibleCount'];
       dashVoted = d['votedCount'];
+      programs = [for (final p in r[4]) Program(p['id'], p['code'], p['name'])];
       elections = [
         for (final e in r[1])
           if (e['status'] != 'closed')
@@ -369,7 +378,10 @@ class AppState extends ChangeNotifier {
         for (final s in items) {
           all.add(Student(
               s['id'], s['studentNum'], s['fullName'], s['gradeLevelId'],
-              hasVoted: s['hasVoted'], canDelete: s['canDelete']));
+              hasVoted: s['hasVoted'],
+              canDelete: s['canDelete'],
+              programId: s['programId'],
+              programCode: s['programCode']));
         }
         if (items.isEmpty || all.length >= (r['total'] as int)) break;
         page++;
@@ -480,6 +492,7 @@ class AppState extends ChangeNotifier {
     required String fullName,
     required int gradeLevelId,
     required String password,
+    int? programId,
   }) async {
     try {
       await Api.post('/api/admin/students', {
@@ -487,6 +500,7 @@ class AppState extends ChangeNotifier {
         'fullName': fullName.trim(),
         'gradeLevelId': gradeLevelId,
         'password': password,
+        'programId': programId,
       });
       await refreshAdmin();
       return null;
@@ -525,16 +539,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<Candidate> adminCandidatesFor(int positionId) =>
-      adminCandidates.where((c) => c.positionId == positionId).toList();
-
   Future<String?> addCandidate({
     required int electionId,
     required String studentNum,
     required int positionId,
     required String partyList,
     required String motto,
-    required String vision,
   }) async {
     final num = studentNum.trim();
     if (num.isEmpty) return 'Enter the student number.';
@@ -550,7 +560,6 @@ class AppState extends ChangeNotifier {
         'positionId': positionId,
         'partyList': partyList.trim(),
         'motto': motto.trim(),
-        'vision': vision.trim(),
       });
       await loadAdminCandidates(electionId);
       return null;
