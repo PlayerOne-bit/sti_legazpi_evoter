@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'api.dart';
 
 class Position {
   final int id;
@@ -7,11 +8,25 @@ class Position {
   const Position(this.id, this.title, this.displayOrder);
 }
 
-/// Grade 7 to 12, then Tertiary Year 1 to 4. Listed in display order.
 class GradeLevel {
   final int id;
   final String name;
   const GradeLevel(this.id, this.name);
+}
+
+const _palette = [
+  Color(0xFF0A4DA2),
+  Color(0xFFB4501E),
+  Color(0xFF1E8E5A),
+  Color(0xFF7A3FB5),
+  Color(0xFFC2185B),
+  Color(0xFF00838F),
+];
+Color colorFor(int id) => _palette[id % _palette.length];
+
+String _initials(String name) {
+  final p = name.trim().split(RegExp(r'\s+'));
+  return (p.first[0] + p.last[0]).toUpperCase();
 }
 
 class Student {
@@ -19,13 +34,12 @@ class Student {
   final String studentNum;
   final String fullName;
   final int gradeLevelId;
-  bool hasVoted;
-  Student(this.id, this.studentNum, this.fullName, this.gradeLevelId, {this.hasVoted = false});
-
-  String get initials {
-    final p = fullName.trim().split(RegExp(r'\s+'));
-    return (p.first[0] + p.last[0]).toUpperCase();
-  }
+  final bool
+      hasVoted; // in the current season (or any season when none is current)
+  final bool canDelete; // false once voted or when a candidate
+  const Student(this.id, this.studentNum, this.fullName, this.gradeLevelId,
+      {this.hasVoted = false, this.canDelete = true});
+  String get initials => _initials(fullName);
 }
 
 class Candidate {
@@ -36,13 +50,38 @@ class Candidate {
   final String vision;
   final Color color;
   final String motto;
-  final String? imageUrl; // later: photo URL from the backend
-  const Candidate(this.id, this.positionId, this.name, this.partyList, this.vision, this.color,
-      {this.motto = '', this.imageUrl});
+  final String? imageUrl;
+  final String studentNum;
+  const Candidate(this.id, this.positionId, this.name, this.partyList,
+      this.vision, this.color,
+      {this.motto = '', this.imageUrl, this.studentNum = ''});
+  String get initials => _initials(name);
+}
 
-  String get initials {
-    final p = name.trim().split(RegExp(r'\s+'));
-    return (p.first[0] + p.last[0]).toUpperCase();
+class TallyEntry {
+  final int candidateId;
+  final String name;
+  final String partyList;
+  final int votes;
+  const TallyEntry(this.candidateId, this.name, this.partyList, this.votes);
+  String get initials => _initials(name);
+  Color get color => colorFor(candidateId);
+}
+
+class PositionTally {
+  final int positionId;
+  final String title;
+  final int total;
+  final List<TallyEntry> entries;
+  const PositionTally(this.positionId, this.title, this.total, this.entries);
+
+  /// Everyone with the top vote count (a tie gives several). Empty when nobody got a vote.
+  List<TallyEntry> get winners {
+    var max = 0;
+    for (final e in entries) {
+      if (e.votes > max) max = e.votes;
+    }
+    return max == 0 ? [] : entries.where((e) => e.votes == max).toList();
   }
 }
 
@@ -54,51 +93,86 @@ class SeasonWinner {
   const SeasonWinner(this.position, this.name, this.partyList, this.votes);
 }
 
-/// One finished voting season (an Election that has been closed).
+/// One finished voting season (shown in History). Winners load when it is opened.
 class Season {
+  final int id;
   final String schoolYear;
   final String club;
   final DateTime startDate;
   final DateTime endDate;
   final int totalVoters;
   final int votedCount;
-  final List<SeasonWinner> winners;
-  final String audience; // which grade levels could vote
-  Season(this.schoolYear, this.club, this.startDate, this.endDate, this.totalVoters, this.votedCount,
-      this.winners, this.audience);
+  final String audience;
+  List<SeasonWinner> winners;
+  Season(this.id, this.schoolYear, this.club, this.startDate, this.endDate,
+      this.totalVoters, this.votedCount, this.audience,
+      [List<SeasonWinner>? winners])
+      : winners = winners ?? [];
 
   double get turnout => totalVoters == 0 ? 0 : votedCount / totalVoters;
 }
 
 enum ElectionStatus { upcoming, open, ended }
 
-/// A scheduled or running voting season. Admins can create as many as they need.
+/// Admin view of a season that is not closed yet.
 class Election {
   final int id;
   String schoolYear;
   String club;
   DateTime startDate;
   DateTime endDate;
-  Set<int> levelIds; // grade levels allowed to vote
-  Election(this.id, this.schoolYear, this.club, this.startDate, this.endDate, this.levelIds);
+  Set<int> levelIds;
+  Election(this.id, this.schoolYear, this.club, this.startDate, this.endDate,
+      this.levelIds);
 
   bool allows(Student s) => levelIds.contains(s.gradeLevelId);
 
   ElectionStatus get status {
-    final now = DateTime.now();
+    final now = Api.now; // server-corrected clock
     if (now.isBefore(startDate)) return ElectionStatus.upcoming;
     if (now.isBefore(endDate)) return ElectionStatus.open;
     return ElectionStatus.ended;
   }
 }
 
-class AppState extends ChangeNotifier {
-  /// The signed-in student in this prototype.
-  static const meId = 1;
+/// Student view of a season (the server sends the audience as text).
+class ClientElection {
+  final int id;
+  final String club;
+  final String schoolYear;
+  final DateTime startDate;
+  final DateTime endDate;
+  final String audience;
+  const ClientElection(this.id, this.club, this.schoolYear, this.startDate,
+      this.endDate, this.audience);
+}
 
+ClientElection? _clientElection(dynamic j) => j == null
+    ? null
+    : ClientElection(j['id'], j['club'], j['schoolYear'],
+        parseUtc(j['startDate']), parseUtc(j['endDate']), j['audience']);
+
+Candidate _candidate(dynamic c, {String studentNum = ''}) => Candidate(
+    c['id'],
+    c['positionId'],
+    c['name'],
+    c['partyList'] ?? '',
+    c['vision'] ?? '',
+    colorFor(c['id']),
+    motto: c['motto'] ?? '',
+    imageUrl: Api.absUrl(c['imageUrl']),
+    studentNum: studentNum);
+
+List<PositionTally> _parseTally(dynamic j) => [
+      for (final p in j)
+        PositionTally(p['positionId'], p['position'], p['totalVotes'], [
+          for (final c in p['candidates'])
+            TallyEntry(c['candidateId'], c['name'], c['partyList'], c['votes']),
+        ]),
+    ];
+
+class AppState extends ChangeNotifier {
   bool isAdmin = false;
-  bool hasVoted = false;
-  final Map<int, int> selections = {}; // positionId -> candidateId
 
   final List<GradeLevel> gradeLevels = const [
     GradeLevel(1, 'Grade 7'),
@@ -112,74 +186,207 @@ class AppState extends ChangeNotifier {
     GradeLevel(9, 'Tertiary Year 3'),
     GradeLevel(10, 'Tertiary Year 4'),
   ];
-
   final List<String> schoolYears = ['2025-2026', '2026-2027', '2027-2028'];
-  final List<String> clubs = ['Student Council', 'Computer Society', 'Business Club'];
-
-  final List<Election> elections = [
-    Election(1, '2026-2027', 'Student Council', DateTime.now().subtract(const Duration(hours: 6)),
-        DateTime.now().add(const Duration(days: 2, hours: 5, minutes: 30)), {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
-    Election(2, '2026-2027', 'Computer Society', DateTime.now().add(const Duration(days: 5, hours: 3)),
-        DateTime.now().add(const Duration(days: 7, hours: 3)), {7, 8, 9, 10}),
-    Election(3, '2026-2027', 'Business Club', DateTime.now().add(const Duration(days: 12)),
-        DateTime.now().add(const Duration(days: 14)), {5, 6, 7, 8}),
+  final List<String> clubs = [
+    'Student Council',
+    'Computer Society',
+    'Business Club'
   ];
 
-  final List<Position> positions = const [
-    Position(1, 'President', 1),
-    Position(2, 'Vice President', 2),
-    Position(3, 'Secretary', 3),
-  ];
+  // ================= student side =================
+  Student? me;
+  bool homeLoaded = false;
+  String? homeError;
+  ClientElection? homeActive; // open season this student may vote in
+  ClientElection?
+      homeOpenForOthers; // a season is open, but not for this grade level
+  ClientElection? homeNext; // next season this student may vote in
+  bool homeWaiting = false; // voting ended, tally pending
+  bool hasVoted = false; // in the active season
+  int? ballotElectionId;
+  List<Position> positions = [];
+  List<Candidate> candidates = [];
+  final Map<int, int> selections = {}; // positionId -> candidateId
 
-  final List<Candidate> candidates = [
-    const Candidate(1, 1, 'Mika Dela Cruz', 'Team Alab',
-        'Free printing hours at the library, a student-run lost and found, and monthly open forums with the administration.', Color(0xFF0A4DA2), motto: 'Your voice, our campus.'),
-    const Candidate(2, 1, 'Jericho Ramos', 'Bagong Sigla',
-        'Move club fairs to Fridays, expand the tutoring program, and publish the council budget every term.', Color(0xFFB4501E), motto: 'Open books, open doors.'),
-    const Candidate(3, 2, 'Aira Villanueva', 'Team Alab',
-        'A mentorship pairing between senior and first-year students, plus a council hotline for concerns.', Color(0xFF1E8E5A), motto: 'No one walks alone.'),
-    const Candidate(4, 2, 'Paolo Mercado', 'Bagong Sigla',
-        'Sports and esports leagues for every department, with equipment sign-out at the council office.', Color(0xFF7A3FB5), motto: 'Every department plays.'),
-    const Candidate(5, 3, 'Trisha Reyes', 'Team Alab',
-        'Meeting minutes posted within 24 hours and a single calendar for every student event.', Color(0xFFC2185B), motto: 'Clear records, clear minds.'),
-    const Candidate(6, 3, 'Kenji Santos', 'Bagong Sigla',
-        'A digital suggestion box answered weekly and a clear record of every approved proposal.', Color(0xFF00838F), motto: 'Every idea gets an answer.'),
-  ];
+  String get electionLabel {
+    final e = homeActive;
+    return e == null ? '' : '${e.club}, ${e.schoolYear}';
+  }
 
-  final List<Student> students = [
-    Student(1, '02000123456', 'Juan Dela Cruz', 6),
-    Student(2, '02000123457', 'Maria Santos', 6, hasVoted: true),
-    Student(3, '02000123458', 'Carlo Bautista', 5, hasVoted: true),
-    Student(4, '02000123459', 'Angelica Flores', 5),
-    Student(5, '02000123460', 'Rey Navarro', 7, hasVoted: true),
-    Student(6, '02000123461', 'Bea Aquino', 4),
-    Student(7, '02000123462', 'Migo Castillo', 8, hasVoted: true),
-    Student(8, '02000123463', 'Lorna Padilla', 3),
-    Student(9, '02000123464', 'Dan Soriano', 6, hasVoted: true),
-    Student(10, '02000123465', 'Faye Lim', 9),
-  ];
+  Future<void> loadHome() async {
+    try {
+      final j = await Api.get('/api/client/home');
+      Api.syncFrom(j['serverTime']);
+      final m = j['me'];
+      me = Student(m['id'], m['studentNum'], m['fullName'], m['gradeLevelId']);
+      homeActive = _clientElection(j['active']);
+      homeOpenForOthers = _clientElection(j['openForOtherLevels']);
+      homeNext = _clientElection(j['next']);
+      homeWaiting = j['waitingForTally'] as bool;
+      hasVoted = j['hasVoted'] as bool;
+      final cid = j['candidatesElectionId'] as int?;
+      if (cid != null) {
+        await loadBallot(cid);
+      } else {
+        positions = [];
+        candidates = [];
+        ballotElectionId = null;
+      }
+      homeLoaded = true;
+      homeError = null;
+    } on ApiException catch (e) {
+      homeError = e.message;
+    }
+    notifyListeners();
+  }
 
-  final Map<int, int> tally = {1: 31, 2: 24, 3: 27, 4: 28, 5: 33, 6: 22};
+  Future<void> loadBallot(int electionId) async {
+    try {
+      final j = await Api.get('/api/client/elections/$electionId/ballot');
+      if (ballotElectionId != electionId) selections.clear();
+      ballotElectionId = electionId;
+      positions = [
+        for (final p in j['positions'])
+          Position(p['id'], p['title'], p['displayOrder'])
+      ];
+      candidates = [
+        for (final p in j['positions'])
+          for (final c in p['candidates']) _candidate(c),
+      ];
+    } on ApiException {
+      positions = [];
+      candidates = [];
+      ballotElectionId = null;
+    }
+  }
 
-  final List<Season> history = [
-    Season('2025-2026', 'Computer Society', DateTime(2026, 3, 2, 8), DateTime(2026, 3, 4, 17), 60, 48, const [
-      SeasonWinner('President', 'Noel Tan', 'Team Byte', 31),
-      SeasonWinner('Secretary', 'Kris Lopez', 'Team Byte', 27),
-    ], 'Tertiary Year 1 to Tertiary Year 4'),
-    Season('2025-2026', 'Student Council', DateTime(2026, 2, 10, 8), DateTime(2026, 2, 12, 17), 180, 142, const [
-      SeasonWinner('President', 'Andrea Cruz', 'Team Alab', 77),
-      SeasonWinner('Vice President', 'Luis Garcia', 'Bagong Sigla', 70),
-      SeasonWinner('Secretary', 'Joy Mendoza', 'Team Alab', 81),
-    ], 'All grade levels'),
-    Season('2024-2025', 'Student Council', DateTime(2025, 2, 11, 8), DateTime(2025, 2, 13, 17), 165, 121, const [
-      SeasonWinner('President', 'Rico Velasco', 'Bagong Sigla', 64),
-      SeasonWinner('Vice President', 'Ana Robles', 'Bagong Sigla', 59),
-    ], 'Grade 9 to Grade 12'),
-  ];
+  List<Candidate> candidatesFor(int positionId) =>
+      candidates.where((c) => c.positionId == positionId).toList();
 
-  // ---------- seasons ----------
+  void select(int positionId, int candidateId) {
+    selections[positionId] = candidateId;
+    notifyListeners();
+  }
 
-  /// The season voters can vote in right now.
+  /// Returns an error message, or null on success.
+  Future<String?> submitVote() async {
+    final id = homeActive?.id;
+    if (id == null) return 'Voting is not open right now.';
+    try {
+      await Api.post('/api/client/elections/$id/vote', {
+        'choices': [
+          for (final e in selections.entries)
+            {'positionId': e.key, 'candidateId': e.value},
+        ],
+      });
+      selections.clear();
+      await loadHome();
+      return null;
+    } on ApiException catch (e) {
+      if (e.status == 409 || e.status == 403) await loadHome();
+      return e.message;
+    }
+  }
+
+  Future<List<PositionTally>> fetchStudentTally() async {
+    final id = homeActive?.id;
+    if (id == null) throw ApiException(0, 'There is no open election.');
+    return _parseTally(await Api.get('/api/client/elections/$id/tally'));
+  }
+
+  // ================= admin side =================
+  bool adminLoaded = false;
+  String? adminError;
+  List<Election> elections = [];
+  List<Season> history = [];
+  List<Student> students = [];
+  int dashEligible = 0;
+  int dashVoted = 0;
+
+  // candidate manager (one season at a time)
+  int? adminCandElectionId;
+  List<Position> adminPositions = [];
+  List<Candidate> adminCandidates = [];
+
+  Future<void> loadAdmin() async {
+    try {
+      final r = await Future.wait([
+        Api.get('/api/admin/dashboard'),
+        Api.get('/api/admin/elections'),
+        Api.get('/api/admin/history'),
+        Api.get('/api/admin/clubs'),
+      ]);
+      final d = r[0];
+      Api.syncFrom(d['serverTime']);
+      dashEligible = d['eligibleCount'];
+      dashVoted = d['votedCount'];
+      elections = [
+        for (final e in r[1])
+          if (e['status'] != 'closed')
+            Election(
+                e['id'],
+                e['schoolYear'],
+                e['club'],
+                parseUtc(e['startDate']),
+                parseUtc(e['endDate']),
+                <int>{...(e['gradeLevelIds'] as List).cast<int>()}),
+      ];
+      history = [
+        for (final h in r[2])
+          Season(
+              h['id'],
+              h['schoolYear'],
+              h['club'],
+              parseUtc(h['startDate']),
+              parseUtc(h['endDate']),
+              h['totalVoters'],
+              h['votedCount'],
+              h['audience']),
+      ];
+      for (final c in r[3]) {
+        final name = c['name'] as String;
+        if (!clubs.any((x) => x.toLowerCase() == name.toLowerCase()))
+          clubs.add(name);
+      }
+      adminLoaded = true;
+      adminError = null;
+    } on ApiException catch (e) {
+      adminError = e.message;
+    }
+    notifyListeners();
+  }
+
+  /// All students, in pages of 200. hasVoted refers to the current season when there is one.
+  Future<void> loadStudents() async {
+    try {
+      final eid = currentElection?.id;
+      final all = <Student>[];
+      var page = 1;
+      while (true) {
+        final r = await Api.get(
+            '/api/admin/students?page=$page&pageSize=200${eid == null ? '' : '&electionId=$eid'}');
+        final items = r['items'] as List;
+        for (final s in items) {
+          all.add(Student(
+              s['id'], s['studentNum'], s['fullName'], s['gradeLevelId'],
+              hasVoted: s['hasVoted'], canDelete: s['canDelete']));
+        }
+        if (items.isEmpty || all.length >= (r['total'] as int)) break;
+        page++;
+      }
+      students = all;
+    } on ApiException catch (e) {
+      adminError = e.message;
+    }
+    notifyListeners();
+  }
+
+  Future<void> refreshAdmin() async {
+    await loadAdmin();
+    await loadStudents();
+  }
+
+  // ---- seasons ----
   Election? get activeElection {
     for (final e in elections) {
       if (e.status == ElectionStatus.open) return e;
@@ -187,50 +394,182 @@ class AppState extends ChangeNotifier {
     return null;
   }
 
-  /// Seasons whose voting time is over but have not been tallied and closed yet.
   List<Election> get pendingTally =>
       elections.where((e) => e.status == ElectionStatus.ended).toList();
 
-  /// The soonest season that has not started yet.
   Election? get nextElection {
-    final list = elections.where((e) => e.status == ElectionStatus.upcoming).toList()
-      ..sort((a, b) => a.startDate.compareTo(b.startDate));
-    return list.isEmpty ? null : list.first;
-  }
-
-  Election? get focusElection =>
-      activeElection ?? (pendingTally.isNotEmpty ? pendingTally.first : nextElection);
-
-  String get electionLabel {
-    final e = focusElection;
-    return e == null ? '' : '${e.club}, ${e.schoolYear}';
-  }
-
-  /// The season admin stats and the Not voted tab refer to.
-  Election? get currentElection =>
-      activeElection ?? (pendingTally.isNotEmpty ? pendingTally.first : null);
-
-  /// The open season this student is allowed to vote in.
-  Election? activeFor(Student? s) {
-    if (s == null) return null;
-    for (final e in elections) {
-      if (e.status == ElectionStatus.open && e.allows(s)) return e;
-    }
-    return null;
-  }
-
-  /// The soonest upcoming season this student is allowed to vote in.
-  Election? nextFor(Student? s) {
-    if (s == null) return null;
     final list = elections
-        .where((e) => e.status == ElectionStatus.upcoming && e.allows(s))
+        .where((e) => e.status == ElectionStatus.upcoming)
         .toList()
       ..sort((a, b) => a.startDate.compareTo(b.startDate));
     return list.isEmpty ? null : list.first;
   }
 
-  bool pendingTallyFor(Student? s) => s != null && pendingTally.any((e) => e.allows(s));
+  Election? get currentElection =>
+      activeElection ?? (pendingTally.isNotEmpty ? pendingTally.first : null);
 
+  Future<String?> saveElection({
+    int? id,
+    required String schoolYear,
+    required String club,
+    required DateTime start,
+    required DateTime end,
+    required Set<int> levels,
+  }) async {
+    final body = {
+      'club': club.trim(),
+      'schoolYear': schoolYear,
+      'startDate': start.toUtc().toIso8601String(),
+      'endDate': end.toUtc().toIso8601String(),
+      'gradeLevelIds': levels.toList()..sort(),
+    };
+    try {
+      if (id == null) {
+        await Api.post('/api/admin/elections', body);
+      } else {
+        await Api.put('/api/admin/elections/$id', body);
+      }
+      await refreshAdmin();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    }
+  }
+
+  Future<String?> deleteElection(int id) async {
+    try {
+      await Api.delete('/api/admin/elections/$id');
+      await refreshAdmin();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    }
+  }
+
+  Future<List<PositionTally>> fetchAdminTally(int electionId) async =>
+      _parseTally(await Api.get('/api/admin/elections/$electionId/tally'));
+
+  /// Counts the votes on the server and moves the season to History.
+  Future<String?> closeSeason(Election e) async {
+    try {
+      await Api.post('/api/admin/elections/${e.id}/close');
+      await refreshAdmin();
+      return null;
+    } on ApiException catch (x) {
+      return x.message;
+    }
+  }
+
+  Future<String?> loadSeasonWinners(Season s) async {
+    try {
+      final j = await Api.get('/api/admin/history/${s.id}');
+      s.winners = [
+        for (final w in j['winners'])
+          SeasonWinner(
+              w['position'], w['name'], w['partyList'], w['voteCount']),
+      ];
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    }
+  }
+
+  // ---- students ----
+  Future<String?> addStudent({
+    required String studentNum,
+    required String fullName,
+    required int gradeLevelId,
+    required String password,
+  }) async {
+    try {
+      await Api.post('/api/admin/students', {
+        'studentNum': studentNum.trim(),
+        'fullName': fullName.trim(),
+        'gradeLevelId': gradeLevelId,
+        'password': password,
+      });
+      await refreshAdmin();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    }
+  }
+
+  Future<String?> deleteStudent(int id) async {
+    try {
+      await Api.delete('/api/admin/students/$id');
+      await refreshAdmin();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    }
+  }
+
+  // ---- candidates (admin) ----
+  Future<void> loadAdminCandidates(int electionId) async {
+    adminCandElectionId =
+        electionId; // set first so the screen does not retry in a loop
+    try {
+      final p = await Api.get('/api/admin/elections/$electionId/positions');
+      final c = await Api.get('/api/admin/elections/$electionId/candidates');
+      adminPositions = [
+        for (final x in p) Position(x['id'], x['title'], x['displayOrder'])
+      ];
+      adminCandidates = [
+        for (final x in c) _candidate(x, studentNum: x['studentNum'])
+      ];
+    } on ApiException {
+      adminPositions = [];
+      adminCandidates = [];
+    }
+    notifyListeners();
+  }
+
+  List<Candidate> adminCandidatesFor(int positionId) =>
+      adminCandidates.where((c) => c.positionId == positionId).toList();
+
+  Future<String?> addCandidate({
+    required int electionId,
+    required String studentNum,
+    required int positionId,
+    required String partyList,
+    required String motto,
+    required String vision,
+  }) async {
+    final num = studentNum.trim();
+    if (num.isEmpty) return 'Enter the student number.';
+    try {
+      final r = await Api.get(
+          '/api/admin/students?search=${Uri.encodeQueryComponent(num)}&pageSize=20');
+      final match =
+          (r['items'] as List).where((s) => s['studentNum'] == num).toList();
+      if (match.isEmpty)
+        return 'No student has the number $num. Add the student first.';
+      await Api.post('/api/admin/elections/$electionId/candidates', {
+        'studentId': match.first['id'],
+        'positionId': positionId,
+        'partyList': partyList.trim(),
+        'motto': motto.trim(),
+        'vision': vision.trim(),
+      });
+      await loadAdminCandidates(electionId);
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    }
+  }
+
+  Future<String?> removeCandidate(int id, int electionId) async {
+    try {
+      await Api.delete('/api/admin/candidates/$id');
+      await loadAdminCandidates(electionId);
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    }
+  }
+
+  // ================= shared =================
   String gradeName(int id) {
     for (final g in gradeLevels) {
       if (g.id == id) return g.name;
@@ -249,161 +588,47 @@ class AppState extends ChangeNotifier {
       while (j + 1 < sorted.length && sorted[j + 1] == sorted[j] + 1) {
         j++;
       }
-      parts.add(i == j ? gradeName(sorted[i]) : '${gradeName(sorted[i])} to ${gradeName(sorted[j])}');
+      parts.add(i == j
+          ? gradeName(sorted[i])
+          : '${gradeName(sorted[i])} to ${gradeName(sorted[j])}');
       i = j + 1;
     }
     return parts.join(', ');
   }
 
-  int eligibleCount(Election e) => students.where(e.allows).length;
-
-  int votedIn(Election e) => students.where((s) => e.allows(s) && s.hasVoted).length;
-
-  /// Re-notify listeners (used when a countdown reaches zero and a status changes).
   void touch() => notifyListeners();
 
-  /// Creates a season (id == null) or updates one. Returns an error message, or null on success.
-  String? saveElection({
-    int? id,
-    required String schoolYear,
-    required String club,
-    required DateTime start,
-    required DateTime end,
-    required Set<int> levels,
-  }) {
-    final name = club.trim();
-    if (name.isEmpty) return 'Enter a club name.';
-    if (levels.isEmpty) return 'Pick at least one grade level that can vote.';
-    if (!end.isAfter(start)) return 'The closing time must be after the opening time.';
-    final dup = elections.any((e) =>
-            e.id != id && e.club.toLowerCase() == name.toLowerCase() && e.schoolYear == schoolYear) ||
-        history.any((s) => s.club.toLowerCase() == name.toLowerCase() && s.schoolYear == schoolYear);
-    if (dup) return '$name already has a season for $schoolYear.';
-    if (id == null) {
-      final nextId = elections.isEmpty ? 1 : elections.map((e) => e.id).reduce((a, b) => a > b ? a : b) + 1;
-      elections.add(Election(nextId, schoolYear, name, start, end, {...levels}));
-    } else {
-      final e = elections.firstWhere((x) => x.id == id);
-      e.schoolYear = schoolYear;
-      e.club = name;
-      e.startDate = start;
-      e.endDate = end;
-      e.levelIds = {...levels};
-    }
-    if (!clubs.any((c) => c.toLowerCase() == name.toLowerCase())) clubs.add(name);
-    notifyListeners();
-    return null;
-  }
+  /// Called when a countdown hits zero: ask the server what changed.
+  void refreshSoon() => Future.delayed(const Duration(seconds: 1), () {
+        if (Api.token == null) return;
+        if (isAdmin) {
+          refreshAdmin();
+        } else {
+          loadHome();
+        }
+      });
 
-  /// Only seasons that have not started can be deleted.
-  String? deleteElection(int id) {
-    final e = elections.firstWhere((x) => x.id == id);
-    if (e.status != ElectionStatus.upcoming) return 'Only upcoming seasons can be deleted.';
-    elections.remove(e);
-    notifyListeners();
-    return null;
-  }
-
-  /// Saves the season's winners to history, removes it, and clears the ballot box for the next season.
-  void closeSeason(Election e) {
-    final winners = <SeasonWinner>[];
-    for (final p in positions) {
-      if (candidatesFor(p.id).isEmpty) continue;
-      final w = winnerFor(p.id);
-      winners.add(SeasonWinner(p.title, w.name, w.partyList, votesFor(w.id)));
-    }
-    history.insert(
-        0,
-        Season(e.schoolYear, e.club, e.startDate, e.endDate, eligibleCount(e), votedIn(e), winners,
-            levelsLabel(e.levelIds)));
-    elections.removeWhere((x) => x.id == e.id);
-    tally.clear();
+  void logout() {
+    Api.logout();
+    isAdmin = false;
+    me = null;
+    homeLoaded = false;
+    homeError = null;
+    homeActive = homeOpenForOthers = homeNext = null;
+    homeWaiting = hasVoted = false;
+    ballotElectionId = null;
+    positions = [];
+    candidates = [];
     selections.clear();
-    hasVoted = false;
-    for (final s in students) {
-      s.hasVoted = false;
-    }
-    notifyListeners();
-  }
-
-  // ---------- students ----------
-
-  Student? get me {
-    for (final s in students) {
-      if (s.id == meId) return s;
-    }
-    return null;
-  }
-
-  int get votedCount => students.where((s) => s.hasVoted).length;
-
-  /// Returns an error message, or null on success.
-  String? addStudent({required String studentNum, required String fullName, required int gradeLevelId}) {
-    final num = studentNum.trim();
-    final name = fullName.trim();
-    if (num.isEmpty || name.isEmpty) return 'Enter the student number and full name.';
-    if (students.any((s) => s.studentNum == num)) return 'A student with that number already exists.';
-    final id = students.isEmpty ? 1 : students.map((s) => s.id).reduce((a, b) => a > b ? a : b) + 1;
-    students.add(Student(id, num, name, gradeLevelId));
-    notifyListeners();
-    return null;
-  }
-
-  /// Students who already voted cannot be deleted. Returns an error message, or null on success.
-  String? deleteStudent(int id) {
-    final s = students.firstWhere((x) => x.id == id);
-    if (s.hasVoted) return 'Students who already voted cannot be deleted.';
-    students.remove(s);
-    notifyListeners();
-    return null;
-  }
-
-  // ---------- candidates and voting ----------
-
-  List<Candidate> candidatesFor(int positionId) =>
-      candidates.where((c) => c.positionId == positionId).toList();
-
-  int votesFor(int candidateId) => tally[candidateId] ?? 0;
-
-  int totalFor(int positionId) =>
-      candidatesFor(positionId).fold(0, (s, c) => s + votesFor(c.id));
-
-  Candidate winnerFor(int positionId) {
-    final list = candidatesFor(positionId)
-      ..sort((a, b) => votesFor(b.id).compareTo(votesFor(a.id)));
-    return list.first;
-  }
-
-  void select(int positionId, int candidateId) {
-    selections[positionId] = candidateId;
-    notifyListeners();
-  }
-
-  void submitVote() {
-    for (final cid in selections.values) {
-      tally[cid] = votesFor(cid) + 1;
-    }
-    hasVoted = true;
-    me?.hasVoted = true;
-    notifyListeners();
-  }
-
-  void addCandidate({
-    required int positionId,
-    required String name,
-    required String partyList,
-    required String vision,
-    String motto = '',
-  }) {
-    const palette = [Color(0xFF0A4DA2), Color(0xFFB4501E), Color(0xFF1E8E5A), Color(0xFF7A3FB5), Color(0xFFC2185B), Color(0xFF00838F)];
-    final id = candidates.isEmpty ? 1 : candidates.map((c) => c.id).reduce((a, b) => a > b ? a : b) + 1;
-    candidates.add(Candidate(id, positionId, name, partyList, vision, palette[id % palette.length], motto: motto));
-    notifyListeners();
-  }
-
-  void removeCandidate(int id) {
-    candidates.removeWhere((c) => c.id == id);
-    notifyListeners();
+    adminLoaded = false;
+    adminError = null;
+    elections = [];
+    history = [];
+    students = [];
+    dashEligible = dashVoted = 0;
+    adminCandElectionId = null;
+    adminPositions = [];
+    adminCandidates = [];
   }
 }
 

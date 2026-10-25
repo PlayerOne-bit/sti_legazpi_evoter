@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui' show FontFeature;
 import 'package:flutter/material.dart';
 import '../theme.dart';
+import '../data/api.dart';
 
 /// Live countdown to [end]. Used by students ("Voting closes in") and
 /// by admins ("Next voting season starts in").
@@ -31,7 +32,7 @@ class _DoomsdayTimerState extends State<DoomsdayTimer> {
   bool _fired = false;
 
   void _tick() {
-    left = widget.end.difference(DateTime.now());
+    left = widget.end.difference(Api.now);
     if (left <= Duration.zero && !_fired) {
       _fired = true;
       final cb = widget.onFinished;
@@ -59,17 +60,24 @@ class _DoomsdayTimerState extends State<DoomsdayTimer> {
     String two(int n) => n.toString().padLeft(2, '0');
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-      decoration: BoxDecoration(color: C.navy, borderRadius: BorderRadius.circular(18)),
+      decoration:
+          BoxDecoration(color: C.navy, borderRadius: BorderRadius.circular(18)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(width: 8, height: 8, decoration: BoxDecoration(color: done ? C.muted : C.yellow, shape: BoxShape.circle)),
+              Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                      color: done ? C.muted : C.yellow,
+                      shape: BoxShape.circle)),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(done ? widget.finishedLabel : widget.label,
-                    style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
+                    style: const TextStyle(
+                        color: Colors.white70, fontWeight: FontWeight.w600)),
               ),
             ],
           ),
@@ -85,7 +93,8 @@ class _DoomsdayTimerState extends State<DoomsdayTimer> {
           ),
           if (widget.subtitle != null) ...[
             const SizedBox(height: 14),
-            Text(widget.subtitle!, style: const TextStyle(color: Colors.white70)),
+            Text(widget.subtitle!,
+                style: const TextStyle(color: Colors.white70)),
           ],
         ],
       ),
@@ -110,7 +119,8 @@ class _Unit extends StatelessWidget {
               fontWeight: FontWeight.w800,
               fontFeatures: const [FontFeature.tabularFigures()],
             )),
-        Text(label, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+        Text(label,
+            style: const TextStyle(color: Colors.white60, fontSize: 12)),
       ],
     );
   }

@@ -17,9 +17,11 @@ class VoteScreen extends StatefulWidget {
 class _VoteScreenState extends State<VoteScreen> {
   final _pc = PageController();
   int page = 0;
+  bool _busy = false;
 
-  List<Position> get _ps =>
-      state.positions.where((p) => state.candidatesFor(p.id).isNotEmpty).toList();
+  List<Position> get _ps => state.positions
+      .where((p) => state.candidatesFor(p.id).isNotEmpty)
+      .toList();
 
   bool _chosen(int i) => state.selections.containsKey(_ps[i].id);
 
@@ -45,18 +47,24 @@ class _VoteScreenState extends State<VoteScreen> {
     setState(() => page = i);
   }
 
-  void _submit() {
-    state.submitVote();
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Ballot submitted. Thanks for voting.')));
-    Navigator.of(context).pop();
+  Future<void> _submit() async {
+    setState(() => _busy = true);
+    final err = await state.submitVote();
+    if (!mounted) return;
+    setState(() => _busy = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(err ?? 'Ballot submitted. Thanks for voting.')));
+    if (err == null || state.hasVoted || state.homeActive == null)
+      Navigator.of(context).pop();
   }
 
   // PC: left and right arrow keys move between positions
   KeyEventResult _onKey(FocusNode node, KeyEvent e) {
     if (e is! KeyDownEvent) return KeyEventResult.ignored;
     final lastIndex = _ps.length;
-    if (e.logicalKey == LogicalKeyboardKey.arrowRight && page < lastIndex && _chosen(page)) {
+    if (e.logicalKey == LogicalKeyboardKey.arrowRight &&
+        page < lastIndex &&
+        _chosen(page)) {
       _go(page + 1);
       return KeyEventResult.handled;
     }
@@ -130,7 +138,8 @@ class _VoteScreenState extends State<VoteScreen> {
                               padding: EdgeInsets.zero,
                               foregroundColor: C.blue,
                               side: const BorderSide(color: C.blue, width: 1.5),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
                             ),
                             child: const Icon(Icons.arrow_back),
                           ),
@@ -139,11 +148,18 @@ class _VoteScreenState extends State<VoteScreen> {
                       ],
                       Expanded(
                         child: isLast
-                            ? BlueButton(label: 'Submit ballot', icon: Icons.how_to_vote, onPressed: _submit)
+                            ? BlueButton(
+                                label: 'Submit ballot',
+                                icon: Icons.how_to_vote,
+                                onPressed: _submit)
                             : BlueButton(
-                                label: _chosen(page) ? 'Next' : 'Choose a candidate',
-                                icon: _chosen(page) ? Icons.arrow_forward : null,
-                                onPressed: _chosen(page) ? () => _go(page + 1) : null,
+                                label: _chosen(page)
+                                    ? 'Next'
+                                    : 'Choose a candidate',
+                                icon:
+                                    _chosen(page) ? Icons.arrow_forward : null,
+                                onPressed:
+                                    _chosen(page) ? () => _go(page + 1) : null,
                               ),
                       ),
                     ],
@@ -175,7 +191,8 @@ class _PositionPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Choose your ${position.title}',
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+                    style: const TextStyle(
+                        fontSize: 22, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 2),
                 const Text('Tap a card, then swipe left or press Next.',
                     style: TextStyle(color: C.muted)),
@@ -219,15 +236,19 @@ class _ReviewPage extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       children: [
-        const Text('Review your ballot', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+        const Text('Review your ballot',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
         const SizedBox(height: 2),
-        const Text('You cannot change your vote after submitting.', style: TextStyle(color: C.muted)),
+        const Text('You cannot change your vote after submitting.',
+            style: TextStyle(color: C.muted)),
         const SizedBox(height: 16),
         for (int i = 0; i < positions.length; i++)
           Builder(builder: (context) {
             final p = positions[i];
             final id = state.selections[p.id];
-            final c = id == null ? null : state.candidates.firstWhere((x) => x.id == id);
+            final c = id == null
+                ? null
+                : state.candidates.firstWhere((x) => x.id == id);
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(14),
@@ -238,21 +259,30 @@ class _ReviewPage extends StatelessWidget {
                     radius: 24,
                     backgroundColor: c?.color ?? C.line,
                     child: Text(c?.initials ?? '?',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+                        style: const TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.w800)),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(p.title, style: const TextStyle(color: C.muted, fontSize: 12)),
+                        Text(p.title,
+                            style:
+                                const TextStyle(color: C.muted, fontSize: 12)),
                         Text(c?.name ?? 'No choice yet',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-                        if (c != null) Text(c.partyList, style: const TextStyle(color: C.muted, fontSize: 13)),
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w800)),
+                        if (c != null)
+                          Text(c.partyList,
+                              style: const TextStyle(
+                                  color: C.muted, fontSize: 13)),
                       ],
                     ),
                   ),
-                  TextButton(onPressed: () => onChange(i), child: const Text('Change')),
+                  TextButton(
+                      onPressed: () => onChange(i),
+                      child: const Text('Change')),
                 ],
               ),
             );

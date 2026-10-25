@@ -15,16 +15,23 @@ class SeasonManagerPage extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Delete ${e.club} ${e.schoolYear}?'),
-        content: const Text('This season has not started, so nothing is lost except its schedule.'),
+        content: const Text(
+            'This season has not started, so nothing is lost except its schedule.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete season')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Delete season')),
         ],
       ),
     );
     if (ok != true || !context.mounted) return;
-    final err = state.deleteElection(e.id);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err ?? 'Season deleted.')));
+    final err = await state.deleteElection(e.id);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(err ?? 'Season deleted.')));
   }
 
   void _close(BuildContext context, Election e) => Navigator.of(context)
@@ -32,7 +39,8 @@ class SeasonManagerPage extends StatelessWidget {
 
   Widget _heading(String t) => Padding(
         padding: const EdgeInsets.only(top: 12, bottom: 10),
-        child: Text(t, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+        child: Text(t,
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
       );
 
   @override
@@ -40,9 +48,13 @@ class SeasonManagerPage extends StatelessWidget {
     return ListenableBuilder(
       listenable: state,
       builder: (context, _) {
-        final open = state.elections.where((e) => e.status == ElectionStatus.open).toList();
+        final open = state.elections
+            .where((e) => e.status == ElectionStatus.open)
+            .toList();
         final ended = state.pendingTally;
-        final upcoming = state.elections.where((e) => e.status == ElectionStatus.upcoming).toList()
+        final upcoming = state.elections
+            .where((e) => e.status == ElectionStatus.upcoming)
+            .toList()
           ..sort((a, b) => a.startDate.compareTo(b.startDate));
         return ListView(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
@@ -60,7 +72,8 @@ class SeasonManagerPage extends StatelessWidget {
                 onEdit: () => showElectionForm(context, existing: e),
               ),
             if (ended.isNotEmpty) _heading('Voting ended, tally pending'),
-            for (final e in ended) ElectionCard(election: e, onClose: () => _close(context, e)),
+            for (final e in ended)
+              ElectionCard(election: e, onClose: () => _close(context, e)),
             if (upcoming.isNotEmpty) _heading('Upcoming'),
             for (final e in upcoming)
               ElectionCard(
@@ -73,7 +86,8 @@ class SeasonManagerPage extends StatelessWidget {
                 padding: EdgeInsets.all(28),
                 child: Center(
                   child: Text('No seasons yet. Create one to schedule a vote.',
-                      textAlign: TextAlign.center, style: TextStyle(color: C.muted)),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: C.muted)),
                 ),
               ),
           ],

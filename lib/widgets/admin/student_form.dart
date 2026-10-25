@@ -24,16 +24,20 @@ Future<void> showStudentForm(BuildContext context) async {
                 TextField(
                   controller: numCtl,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Student number'),
+                  decoration:
+                      const InputDecoration(labelText: 'Student number'),
                 ),
                 const SizedBox(height: 12),
-                TextField(controller: nameCtl, decoration: const InputDecoration(labelText: 'Full name')),
+                TextField(
+                    controller: nameCtl,
+                    decoration: const InputDecoration(labelText: 'Full name')),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<int>(
                   value: grade,
                   decoration: const InputDecoration(labelText: 'Grade level'),
                   items: [
-                    for (final g in state.gradeLevels) DropdownMenuItem(value: g.id, child: Text(g.name)),
+                    for (final g in state.gradeLevels)
+                      DropdownMenuItem(value: g.id, child: Text(g.name)),
                   ],
                   onChanged: (v) => setS(() => grade = v!),
                 ),
@@ -43,36 +47,40 @@ Future<void> showStudentForm(BuildContext context) async {
                   obscureText: true,
                   decoration: const InputDecoration(
                     labelText: 'Temporary password',
-                    helperText: 'At least 6 characters. The backend will store only a hash.',
+                    helperText:
+                        'At least 6 characters. The backend will store only a hash.',
                   ),
                 ),
                 if (error != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 10),
-                    child: Text(error!, style: TextStyle(color: Colors.red.shade700)),
+                    child: Text(error!,
+                        style: TextStyle(color: Colors.red.shade700)),
                   ),
               ],
             ),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               if (passCtl.text.length < 6) {
                 setS(() => error = 'The password needs at least 6 characters.');
                 return;
               }
-              final err = state.addStudent(
+              final err = await state.addStudent(
                 studentNum: numCtl.text,
                 fullName: nameCtl.text,
                 gradeLevelId: grade,
+                password: passCtl.text,
               );
               if (err != null) {
                 setS(() => error = err);
                 return;
               }
-              Navigator.pop(ctx);
+              if (ctx.mounted) Navigator.pop(ctx);
             },
             child: const Text('Add student'),
           ),

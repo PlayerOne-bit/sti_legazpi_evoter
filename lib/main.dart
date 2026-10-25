@@ -13,9 +13,12 @@ class EVoterApp extends StatelessWidget {
         title: 'STI eVoter',
         debugShowCheckedModeBanner: false,
         theme: buildTheme(),
-        // lets mouse and trackpad drag the carousel on PC
         scrollBehavior: const MaterialScrollBehavior().copyWith(
-          dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad},
+          dragDevices: {
+            PointerDeviceKind.touch,
+            PointerDeviceKind.mouse,
+            PointerDeviceKind.trackpad
+          },
         ),
         home: const AuthPage(),
       );

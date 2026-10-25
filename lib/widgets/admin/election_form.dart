@@ -5,15 +5,19 @@ import '../../theme.dart';
 /// Create a voting season, or edit one when [existing] is given.
 /// Seasons that already started keep their club, school year, opening time,
 /// and who-can-vote list locked.
-Future<void> showElectionForm(BuildContext context, {Election? existing}) async {
+Future<void> showElectionForm(BuildContext context,
+    {Election? existing}) async {
   final locked = existing != null && existing.status != ElectionStatus.upcoming;
   final clubCtl = TextEditingController(text: existing?.club ?? '');
   String year = existing?.schoolYear ?? state.schoolYears[1];
   final now = DateTime.now();
   DateTime start = existing?.startDate ??
       DateTime(now.year, now.month, now.day, 8).add(const Duration(days: 7));
-  DateTime end = existing?.endDate ?? start.add(const Duration(days: 2, hours: 9));
-  Set<int> levels = {...(existing?.levelIds ?? state.gradeLevels.map((g) => g.id))};
+  DateTime end =
+      existing?.endDate ?? start.add(const Duration(days: 2, hours: 9));
+  Set<int> levels = {
+    ...(existing?.levelIds ?? state.gradeLevels.map((g) => g.id))
+  };
   String? error;
 
   Future<DateTime?> pick(BuildContext ctx, DateTime init) async {
@@ -24,7 +28,8 @@ Future<void> showElectionForm(BuildContext context, {Election? existing}) async 
       lastDate: DateTime(2035),
     );
     if (d == null || !ctx.mounted) return null;
-    final t = await showTimePicker(context: ctx, initialTime: TimeOfDay.fromDateTime(init));
+    final t = await showTimePicker(
+        context: ctx, initialTime: TimeOfDay.fromDateTime(init));
     if (t == null) return null;
     return DateTime(d.year, d.month, d.day, t.hour, t.minute);
   }
@@ -33,7 +38,8 @@ Future<void> showElectionForm(BuildContext context, {Election? existing}) async 
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setS) => AlertDialog(
-        title: Text(existing == null ? 'Create voting season' : 'Edit voting season'),
+        title: Text(
+            existing == null ? 'Create voting season' : 'Edit voting season'),
         content: SizedBox(
           width: 420,
           child: SingleChildScrollView(
@@ -44,7 +50,10 @@ Future<void> showElectionForm(BuildContext context, {Election? existing}) async 
                 DropdownButtonFormField<String>(
                   value: year,
                   decoration: const InputDecoration(labelText: 'School year'),
-                  items: [for (final y in state.schoolYears) DropdownMenuItem(value: y, child: Text(y))],
+                  items: [
+                    for (final y in state.schoolYears)
+                      DropdownMenuItem(value: y, child: Text(y))
+                  ],
                   onChanged: locked ? null : (v) => setS(() => year = v!),
                 ),
                 const SizedBox(height: 12),
@@ -59,7 +68,9 @@ Future<void> showElectionForm(BuildContext context, {Election? existing}) async 
                     spacing: 8,
                     children: [
                       for (final c in state.clubs)
-                        ActionChip(label: Text(c), onPressed: () => setS(() => clubCtl.text = c)),
+                        ActionChip(
+                            label: Text(c),
+                            onPressed: () => setS(() => clubCtl.text = c)),
                     ],
                   ),
                 ],
@@ -79,7 +90,8 @@ Future<void> showElectionForm(BuildContext context, {Election? existing}) async 
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.stop_circle_outlined, color: C.blue),
+                  leading:
+                      const Icon(Icons.stop_circle_outlined, color: C.blue),
                   title: const Text('Voting closes'),
                   subtitle: Text(fmtDate(end)),
                   onTap: () async {
@@ -91,11 +103,13 @@ Future<void> showElectionForm(BuildContext context, {Election? existing}) async 
                 Row(
                   children: [
                     const Expanded(
-                      child: Text('Who can vote', style: TextStyle(fontWeight: FontWeight.w700)),
+                      child: Text('Who can vote',
+                          style: TextStyle(fontWeight: FontWeight.w700)),
                     ),
                     if (!locked) ...[
                       TextButton(
-                        onPressed: () => setS(() => levels = {...state.gradeLevels.map((g) => g.id)}),
+                        onPressed: () => setS(() =>
+                            levels = {...state.gradeLevels.map((g) => g.id)}),
                         child: const Text('All'),
                       ),
                       TextButton(
@@ -128,17 +142,19 @@ Future<void> showElectionForm(BuildContext context, {Election? existing}) async 
                 if (error != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 10),
-                    child: Text(error!, style: TextStyle(color: Colors.red.shade700)),
+                    child: Text(error!,
+                        style: TextStyle(color: Colors.red.shade700)),
                   ),
               ],
             ),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           FilledButton(
-            onPressed: () {
-              final err = state.saveElection(
+            onPressed: () async {
+              final err = await state.saveElection(
                 id: existing?.id,
                 schoolYear: year,
                 club: clubCtl.text,
@@ -150,7 +166,7 @@ Future<void> showElectionForm(BuildContext context, {Election? existing}) async 
                 setS(() => error = err);
                 return;
               }
-              Navigator.pop(ctx);
+              if (ctx.mounted) Navigator.pop(ctx);
             },
             child: Text(existing == null ? 'Create season' : 'Save changes'),
           ),

@@ -16,13 +16,24 @@ class HistoryManagerPage extends StatelessWidget {
           if (state.history.isEmpty)
             const Padding(
               padding: EdgeInsets.all(24),
-              child: Center(child: Text('No finished seasons yet. Close an election and it will appear here.')),
+              child: Center(
+                  child: Text(
+                      'No finished seasons yet. Close an election and it will appear here.')),
             ),
           for (final s in state.history)
             HistoryCard(
               season: s,
-              onTap: () => Navigator.of(context)
-                  .push(MaterialPageRoute(builder: (_) => SeasonScreen(season: s))),
+              onTap: () async {
+                final err = await state.loadSeasonWinners(s);
+                if (!context.mounted) return;
+                if (err != null) {
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(SnackBar(content: Text(err)));
+                  return;
+                }
+                Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => SeasonScreen(season: s)));
+              },
             ),
         ],
       ),

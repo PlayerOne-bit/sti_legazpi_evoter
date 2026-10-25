@@ -4,6 +4,7 @@ import 'client/home.dart';
 import '../data/mock.dart';
 import '../theme.dart';
 import '../widgets/blue_button.dart';
+import '../data/api.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -15,14 +16,32 @@ class AuthPage extends StatefulWidget {
 class _AuthPageState extends State<AuthPage> {
   bool admin = false;
   bool hide = true;
+  bool busy = false;
+  String? error;
   final _user = TextEditingController();
   final _pass = TextEditingController();
 
-  void _submit() {
-    state.isAdmin = admin;
-    Navigator.of(context).pushReplacement(MaterialPageRoute(
-      builder: (_) => admin ? const AdminShell() : const ClientHome(),
-    ));
+  Future<void> _submit() async {
+    if (busy) return;
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      await Api.syncClock();
+      await Api.login(admin: admin, user: _user.text, pass: _pass.text);
+      if (!mounted) return;
+      state.isAdmin = admin;
+      Navigator.of(context).pushReplacement(MaterialPageRoute(
+        builder: (_) => admin ? const AdminShell() : const ClientHome(),
+      ));
+    } on ApiException catch (e) {
+      if (mounted)
+        setState(() {
+          busy = false;
+          error = e.message;
+        });
+    }
   }
 
   Widget _brand({bool large = false}) => Column(
@@ -32,10 +51,16 @@ class _AuthPageState extends State<AuthPage> {
           Container(width: 44, height: 5, color: C.yellow),
           const SizedBox(height: 18),
           Text('STI eVoter',
-              style: TextStyle(color: Colors.white, fontSize: large ? 56 : 36, fontWeight: FontWeight.w800)),
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: large ? 56 : 36,
+                  fontWeight: FontWeight.w800)),
           const SizedBox(height: 8),
           Text('Vote from your phone. No paper ballots, no waiting in line.',
-              style: TextStyle(color: Colors.white70, fontSize: large ? 18 : 15, height: 1.4)),
+              style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: large ? 18 : 15,
+                  height: 1.4)),
         ],
       );
 
@@ -54,7 +79,8 @@ class _AuthPageState extends State<AuthPage> {
           TextField(
             controller: _user,
             textInputAction: TextInputAction.next,
-            decoration: InputDecoration(labelText: admin ? 'Username' : 'Student number'),
+            decoration: InputDecoration(
+                labelText: admin ? 'Username' : 'Student number'),
           ),
           const SizedBox(height: 14),
           TextField(
@@ -72,8 +98,14 @@ class _AuthPageState extends State<AuthPage> {
           const SizedBox(height: 22),
           BlueButton(label: 'Sign in', onPressed: _submit),
           const SizedBox(height: 14),
-          const Text('Prototype: any credentials work.',
-              textAlign: TextAlign.center, style: TextStyle(color: C.muted)),
+          if (error != null)
+            Text(error!,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.red.shade700)),
+          const SizedBox(height: 14),
+          BlueButton(
+              label: busy ? 'Signing in...' : 'Sign in',
+              onPressed: busy ? null : _submit),
         ],
       );
 
