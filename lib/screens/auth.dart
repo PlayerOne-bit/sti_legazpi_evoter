@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'admin/admin_shell.dart';
-import 'client/home.dart';
+import '../data/api.dart';
 import '../data/mock.dart';
 import '../theme.dart';
 import '../widgets/blue_button.dart';
-import '../data/api.dart';
+import 'admin/admin_shell.dart';
+import 'client/home.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -21,6 +21,13 @@ class _AuthPageState extends State<AuthPage> {
   final _user = TextEditingController();
   final _pass = TextEditingController();
 
+  @override
+  void dispose() {
+    _user.dispose();
+    _pass.dispose();
+    super.dispose();
+  }
+
   Future<void> _submit() async {
     if (busy) return;
     setState(() {
@@ -36,11 +43,12 @@ class _AuthPageState extends State<AuthPage> {
         builder: (_) => admin ? const AdminShell() : const ClientHome(),
       ));
     } on ApiException catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           busy = false;
           error = e.message;
         });
+      }
     }
   }
 
@@ -48,6 +56,13 @@ class _AuthPageState extends State<AuthPage> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Image.asset(
+            'assets/logo.jpe', // path from the project root, not from this file
+            height: large ? 90 : 64,
+            errorBuilder: (_, __, ___) =>
+                const SizedBox.shrink(), // no red screen if the file is missing
+          ),
+          const SizedBox(height: 18),
           Container(width: 44, height: 5, color: C.yellow),
           const SizedBox(height: 18),
           Text('STI eVoter',
@@ -56,7 +71,7 @@ class _AuthPageState extends State<AuthPage> {
                   fontSize: large ? 56 : 36,
                   fontWeight: FontWeight.w800)),
           const SizedBox(height: 8),
-          Text('Vote from your phone. No paper ballots, no waiting in line.',
+          Text('Vote anywhere. Be faster, no waiting in line.',
               style: TextStyle(
                   color: Colors.white70,
                   fontSize: large ? 18 : 15,
@@ -95,17 +110,17 @@ class _AuthPageState extends State<AuthPage> {
               ),
             ),
           ),
-          const SizedBox(height: 22),
-          BlueButton(label: 'Sign in', onPressed: _submit),
-          const SizedBox(height: 14),
-          if (error != null)
+          if (error != null) ...[
+            const SizedBox(height: 14),
             Text(error!,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.red.shade700)),
-          const SizedBox(height: 14),
+          ],
+          const SizedBox(height: 22),
           BlueButton(
-              label: busy ? 'Signing in...' : 'Sign in',
-              onPressed: busy ? null : _submit),
+            label: busy ? 'Signing in...' : 'Sign in',
+            onPressed: busy ? null : _submit,
+          ),
         ],
       );
 
