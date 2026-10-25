@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
+import '../../data/mock.dart';
 import '../../widgets/centered_body.dart';
+import '../../widgets/loading_view.dart';
 import '../auth.dart';
 import 'candidate_manager.dart';
 import 'dashboard.dart';
 import 'history_manager.dart';
 import 'season_manager.dart';
 import 'student_manager.dart';
-import '../../data/mock.dart';
-import '../../widgets/loading_view.dart';
 
 class AdminShell extends StatefulWidget {
   const AdminShell({super.key});
@@ -32,10 +32,19 @@ class _AdminShellState extends State<AdminShell> {
     CandidateManagerPage(),
     HistoryManagerPage(),
   ];
+
   @override
   void initState() {
     super.initState();
     state.loadAdmin();
+  }
+
+  void _signOut() {
+    state.logout();
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const AuthPage()),
+      (_) => false,
+    );
   }
 
   @override
@@ -62,19 +71,18 @@ class _AdminShellState extends State<AdminShell> {
             title: Text(titles[i],
                 style: const TextStyle(fontWeight: FontWeight.w800)),
             actions: [
-            IconButton(tooltip: 'Refresh', icon: const Icon(Icons.refresh), onPressed: state.refreshAdmin),
-            IconButton(
-              tooltip: 'Sign out',
-              icon: const Icon(Icons.logout),
-              onPressed: () {
-                state.logout();
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const AuthPage()),
-                  (_) => false,
-                );
-              },
-            ),
-          ],
+              IconButton(
+                tooltip: 'Refresh',
+                icon: const Icon(Icons.refresh),
+                onPressed: state.refreshAdmin,
+              ),
+              IconButton(
+                tooltip: 'Sign out',
+                icon: const Icon(Icons.logout),
+                onPressed: _signOut,
+              ),
+            ],
+          ),
           body: wide
               ? Row(
                   children: [
