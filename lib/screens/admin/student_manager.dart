@@ -60,7 +60,10 @@ class _StudentManagerPageState extends State<StudentManagerPage> {
         final matches = state.students
             .where((s) => s.fullName.toLowerCase().contains(q.toLowerCase()) || s.studentNum.contains(q))
             .toList();
-        final notVoted = matches.where((s) => !s.hasVoted).toList();
+        final cur = state.currentElection;
+        // Not voted only lists students who are allowed to vote in the current season.
+        final notVoted =
+            matches.where((s) => !s.hasVoted && (cur == null || cur.allows(s))).toList();
         final voted = matches.where((s) => s.hasVoted).toList();
         return DefaultTabController(
           length: 2,
@@ -93,6 +96,18 @@ class _StudentManagerPageState extends State<StudentManagerPage> {
                   ],
                 ),
               ),
+              if (cur != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Not voted lists students eligible for ${cur.club}, ${cur.schoolYear} '
+                      '(${state.levelsLabel(cur.levelIds)}).',
+                      style: const TextStyle(color: C.muted, fontSize: 12),
+                    ),
+                  ),
+                ),
               TabBar(
                 labelColor: C.blue,
                 unselectedLabelColor: C.muted,

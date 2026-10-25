@@ -3,7 +3,8 @@ import '../../data/mock.dart';
 import '../../theme.dart';
 
 /// Create a voting season, or edit one when [existing] is given.
-/// Seasons that already started keep their club, school year, and opening time locked.
+/// Seasons that already started keep their club, school year, opening time,
+/// and who-can-vote list locked.
 Future<void> showElectionForm(BuildContext context, {Election? existing}) async {
   final locked = existing != null && existing.status != ElectionStatus.upcoming;
   final clubCtl = TextEditingController(text: existing?.club ?? '');
@@ -12,6 +13,7 @@ Future<void> showElectionForm(BuildContext context, {Election? existing}) async 
   DateTime start = existing?.startDate ??
       DateTime(now.year, now.month, now.day, 8).add(const Duration(days: 7));
   DateTime end = existing?.endDate ?? start.add(const Duration(days: 2, hours: 9));
+  Set<int> levels = {...(existing?.levelIds ?? state.gradeLevels.map((g) => g.id))};
   String? error;
 
   Future<DateTime?> pick(BuildContext ctx, DateTime init) async {
@@ -85,9 +87,47 @@ Future<void> showElectionForm(BuildContext context, {Election? existing}) async 
                     if (v != null) setS(() => end = v);
                   },
                 ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text('Who can vote', style: TextStyle(fontWeight: FontWeight.w700)),
+                    ),
+                    if (!locked) ...[
+                      TextButton(
+                        onPressed: () => setS(() => levels = {...state.gradeLevels.map((g) => g.id)}),
+                        child: const Text('All'),
+                      ),
+                      TextButton(
+                        onPressed: () => setS(() => levels = <int>{}),
+                        child: const Text('Clear'),
+                      ),
+                    ],
+                  ],
+                ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    for (final g in state.gradeLevels)
+                      FilterChip(
+                        label: Text(g.name),
+                        selected: levels.contains(g.id),
+                        onSelected: locked
+                            ? null
+                            : (v) => setS(() {
+                                  if (v) {
+                                    levels.add(g.id);
+                                  } else {
+                                    levels.remove(g.id);
+                                  }
+                                }),
+                      ),
+                  ],
+                ),
                 if (error != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.only(top: 10),
                     child: Text(error!, style: TextStyle(color: Colors.red.shade700)),
                   ),
               ],
@@ -104,6 +144,7 @@ Future<void> showElectionForm(BuildContext context, {Election? existing}) async 
                 club: clubCtl.text,
                 start: start,
                 end: end,
+                levels: levels,
               );
               if (err != null) {
                 setS(() => error = err);

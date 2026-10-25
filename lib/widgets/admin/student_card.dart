@@ -29,7 +29,7 @@ class StudentCard extends StatelessWidget {
               children: [
                 Text(student.fullName,
                     maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
-                Text('${student.studentNum}, Grade ${student.gradeLevel}',
+                Text('${student.studentNum}, ${state.gradeName(student.gradeLevelId)}',
                     maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: C.muted, fontSize: 13)),
               ],
             ),

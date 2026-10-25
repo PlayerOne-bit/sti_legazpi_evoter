@@ -71,6 +71,12 @@ class ElectionCard extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(child: Text('Closes ${fmtDate(election.endDate)}')),
           ]),
+          const SizedBox(height: 6),
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Icon(Icons.groups_outlined, size: 18, color: C.muted),
+            const SizedBox(width: 8),
+            Expanded(child: Text('Open to ${state.levelsLabel(election.levelIds)}')),
+          ]),
           if (onClose != null) ...[
             const SizedBox(height: 14),
             BlueButton(label: 'Close season and tally votes', icon: Icons.emoji_events, onPressed: onClose),

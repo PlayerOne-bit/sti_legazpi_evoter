@@ -6,7 +6,7 @@ Future<void> showStudentForm(BuildContext context) async {
   final numCtl = TextEditingController();
   final nameCtl = TextEditingController();
   final passCtl = TextEditingController();
-  int grade = 12;
+  int grade = 6; // Grade 12
   String? error;
 
   await showDialog<void>(
@@ -32,9 +32,8 @@ Future<void> showStudentForm(BuildContext context) async {
                 DropdownButtonFormField<int>(
                   value: grade,
                   decoration: const InputDecoration(labelText: 'Grade level'),
-                  items: const [
-                    DropdownMenuItem(value: 11, child: Text('Grade 11')),
-                    DropdownMenuItem(value: 12, child: Text('Grade 12')),
+                  items: [
+                    for (final g in state.gradeLevels) DropdownMenuItem(value: g.id, child: Text(g.name)),
                   ],
                   onChanged: (v) => setS(() => grade = v!),
                 ),
@@ -67,7 +66,7 @@ Future<void> showStudentForm(BuildContext context) async {
               final err = state.addStudent(
                 studentNum: numCtl.text,
                 fullName: nameCtl.text,
-                gradeLevel: grade,
+                gradeLevelId: grade,
               );
               if (err != null) {
                 setS(() => error = err);

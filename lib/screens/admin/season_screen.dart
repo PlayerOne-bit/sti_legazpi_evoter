@@ -36,6 +36,8 @@ class SeasonScreen extends StatelessWidget {
             const SizedBox(height: 2),
             Text('${fmtDate(season.startDate)} to ${fmtDate(season.endDate)}',
                 style: const TextStyle(color: C.muted)),
+            const SizedBox(height: 2),
+            Text('Open to ${season.audience}', style: const TextStyle(color: C.muted)),
             const SizedBox(height: 16),
             Row(
               children: [

@@ -17,10 +17,14 @@ class ClientHome extends StatelessWidget {
     return ListenableBuilder(
       listenable: state,
       builder: (context, _) {
-        final first = state.me?.fullName.split(' ').first ?? 'there';
-        final active = state.activeElection;
-        final next = state.nextElection;
-        final waitingTally = state.pendingTally.isNotEmpty;
+        final me = state.me;
+        final first = me?.fullName.split(' ').first ?? 'there';
+        // Only seasons this student's grade level may vote in
+        final active = state.activeFor(me);
+        final next = state.nextFor(me);
+        final openForOthers = active == null ? state.activeElection : null;
+        final waitingTally = state.pendingTallyFor(me);
+        final nothing = active == null && openForOthers == null && !waitingTally && next == null;
         return Scaffold(
           appBar: AppBar(
             title: Text('Hi, $first', style: const TextStyle(fontWeight: FontWeight.w800)),
@@ -40,16 +44,23 @@ class ClientHome extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
               children: [
+                if (me != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(state.gradeName(me.gradeLevelId), style: const TextStyle(color: C.muted)),
+                  ),
+
+                // 1. The ongoing season (counts down to when voting closes)
                 if (active != null) ...[
                   Text('${active.club} election, ${active.schoolYear}',
-                      style: const TextStyle(color: C.muted)),
-                  const SizedBox(height: 12),
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 10),
                   DoomsdayTimer(
                     key: ValueKey('close-${active.id}-${active.endDate.millisecondsSinceEpoch}'),
                     end: active.endDate,
                     onFinished: state.touch,
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 14),
                   if (state.hasVoted)
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -82,27 +93,39 @@ class ClientHome extends StatelessWidget {
                       onPressed: () => Navigator.of(context)
                           .push(MaterialPageRoute(builder: (_) => const VoteScreen())),
                     ),
-                ] else if (waitingTally)
+                ] else if (openForOthers != null)
+                  _Notice(
+                    icon: Icons.info_outline,
+                    title: '${openForOthers.club} voting is open',
+                    body: 'It is open to ${state.levelsLabel(openForOthers.levelIds)} only.',
+                  )
+                else if (waitingTally)
                   const _Notice(
                     icon: Icons.lock_clock,
                     title: 'Voting has closed',
                     body: 'The results will be posted once the admin finishes the tally.',
                   )
-                else if (next != null)
-                  DoomsdayTimer(
-                    key: ValueKey('open-${next.id}-${next.startDate.millisecondsSinceEpoch}'),
-                    label: 'Voting opens in',
-                    finishedLabel: 'Voting is about to open',
-                    end: next.startDate,
-                    subtitle: '${next.club}, ${next.schoolYear}',
-                    onFinished: state.touch,
-                  )
-                else
+                else if (nothing)
                   const _Notice(
                     icon: Icons.event_busy,
                     title: 'No election scheduled',
                     body: 'Check back later. The admin will announce the next voting season.',
                   ),
+
+                // 2. The next season (always shown when there is one, even during a vote)
+                if (next != null) ...[
+                  const SizedBox(height: 16),
+                  DoomsdayTimer(
+                    key: ValueKey('next-${next.id}-${next.startDate.millisecondsSinceEpoch}'),
+                    label: 'Next voting season starts in',
+                    finishedLabel: 'Voting is about to open',
+                    end: next.startDate,
+                    subtitle: '${next.club}, ${next.schoolYear}\n'
+                        'Open to ${state.levelsLabel(next.levelIds)}',
+                    onFinished: state.touch,
+                  ),
+                ],
+
                 const SizedBox(height: 28),
                 const Text('Meet the candidates',
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),

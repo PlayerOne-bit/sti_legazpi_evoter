@@ -7,13 +7,20 @@ class Position {
   const Position(this.id, this.title, this.displayOrder);
 }
 
+/// Grade 7 to 12, then Tertiary Year 1 to 4. Listed in display order.
+class GradeLevel {
+  final int id;
+  final String name;
+  const GradeLevel(this.id, this.name);
+}
+
 class Student {
   final int id;
   final String studentNum;
   final String fullName;
-  final int gradeLevel;
+  final int gradeLevelId;
   bool hasVoted;
-  Student(this.id, this.studentNum, this.fullName, this.gradeLevel, {this.hasVoted = false});
+  Student(this.id, this.studentNum, this.fullName, this.gradeLevelId, {this.hasVoted = false});
 
   String get initials {
     final p = fullName.trim().split(RegExp(r'\s+'));
@@ -56,7 +63,9 @@ class Season {
   final int totalVoters;
   final int votedCount;
   final List<SeasonWinner> winners;
-  Season(this.schoolYear, this.club, this.startDate, this.endDate, this.totalVoters, this.votedCount, this.winners);
+  final String audience; // which grade levels could vote
+  Season(this.schoolYear, this.club, this.startDate, this.endDate, this.totalVoters, this.votedCount,
+      this.winners, this.audience);
 
   double get turnout => totalVoters == 0 ? 0 : votedCount / totalVoters;
 }
@@ -70,7 +79,10 @@ class Election {
   String club;
   DateTime startDate;
   DateTime endDate;
-  Election(this.id, this.schoolYear, this.club, this.startDate, this.endDate);
+  Set<int> levelIds; // grade levels allowed to vote
+  Election(this.id, this.schoolYear, this.club, this.startDate, this.endDate, this.levelIds);
+
+  bool allows(Student s) => levelIds.contains(s.gradeLevelId);
 
   ElectionStatus get status {
     final now = DateTime.now();
@@ -88,16 +100,29 @@ class AppState extends ChangeNotifier {
   bool hasVoted = false;
   final Map<int, int> selections = {}; // positionId -> candidateId
 
+  final List<GradeLevel> gradeLevels = const [
+    GradeLevel(1, 'Grade 7'),
+    GradeLevel(2, 'Grade 8'),
+    GradeLevel(3, 'Grade 9'),
+    GradeLevel(4, 'Grade 10'),
+    GradeLevel(5, 'Grade 11'),
+    GradeLevel(6, 'Grade 12'),
+    GradeLevel(7, 'Tertiary Year 1'),
+    GradeLevel(8, 'Tertiary Year 2'),
+    GradeLevel(9, 'Tertiary Year 3'),
+    GradeLevel(10, 'Tertiary Year 4'),
+  ];
+
   final List<String> schoolYears = ['2025-2026', '2026-2027', '2027-2028'];
   final List<String> clubs = ['Student Council', 'Computer Society', 'Business Club'];
 
   final List<Election> elections = [
     Election(1, '2026-2027', 'Student Council', DateTime.now().subtract(const Duration(hours: 6)),
-        DateTime.now().add(const Duration(days: 2, hours: 5, minutes: 30))),
+        DateTime.now().add(const Duration(days: 2, hours: 5, minutes: 30)), {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
     Election(2, '2026-2027', 'Computer Society', DateTime.now().add(const Duration(days: 5, hours: 3)),
-        DateTime.now().add(const Duration(days: 7, hours: 3))),
+        DateTime.now().add(const Duration(days: 7, hours: 3)), {7, 8, 9, 10}),
     Election(3, '2026-2027', 'Business Club', DateTime.now().add(const Duration(days: 12)),
-        DateTime.now().add(const Duration(days: 14))),
+        DateTime.now().add(const Duration(days: 14)), {5, 6, 7, 8}),
   ];
 
   final List<Position> positions = const [
@@ -122,16 +147,16 @@ class AppState extends ChangeNotifier {
   ];
 
   final List<Student> students = [
-    Student(1, '02000123456', 'Juan Dela Cruz', 12),
-    Student(2, '02000123457', 'Maria Santos', 12, hasVoted: true),
-    Student(3, '02000123458', 'Carlo Bautista', 11, hasVoted: true),
-    Student(4, '02000123459', 'Angelica Flores', 11),
-    Student(5, '02000123460', 'Rey Navarro', 12, hasVoted: true),
-    Student(6, '02000123461', 'Bea Aquino', 11),
-    Student(7, '02000123462', 'Migo Castillo', 12, hasVoted: true),
-    Student(8, '02000123463', 'Lorna Padilla', 11),
-    Student(9, '02000123464', 'Dan Soriano', 12, hasVoted: true),
-    Student(10, '02000123465', 'Faye Lim', 11),
+    Student(1, '02000123456', 'Juan Dela Cruz', 6),
+    Student(2, '02000123457', 'Maria Santos', 6, hasVoted: true),
+    Student(3, '02000123458', 'Carlo Bautista', 5, hasVoted: true),
+    Student(4, '02000123459', 'Angelica Flores', 5),
+    Student(5, '02000123460', 'Rey Navarro', 7, hasVoted: true),
+    Student(6, '02000123461', 'Bea Aquino', 4),
+    Student(7, '02000123462', 'Migo Castillo', 8, hasVoted: true),
+    Student(8, '02000123463', 'Lorna Padilla', 3),
+    Student(9, '02000123464', 'Dan Soriano', 6, hasVoted: true),
+    Student(10, '02000123465', 'Faye Lim', 9),
   ];
 
   final Map<int, int> tally = {1: 31, 2: 24, 3: 27, 4: 28, 5: 33, 6: 22};
@@ -140,16 +165,16 @@ class AppState extends ChangeNotifier {
     Season('2025-2026', 'Computer Society', DateTime(2026, 3, 2, 8), DateTime(2026, 3, 4, 17), 60, 48, const [
       SeasonWinner('President', 'Noel Tan', 'Team Byte', 31),
       SeasonWinner('Secretary', 'Kris Lopez', 'Team Byte', 27),
-    ]),
+    ], 'Tertiary Year 1 to Tertiary Year 4'),
     Season('2025-2026', 'Student Council', DateTime(2026, 2, 10, 8), DateTime(2026, 2, 12, 17), 180, 142, const [
       SeasonWinner('President', 'Andrea Cruz', 'Team Alab', 77),
       SeasonWinner('Vice President', 'Luis Garcia', 'Bagong Sigla', 70),
       SeasonWinner('Secretary', 'Joy Mendoza', 'Team Alab', 81),
-    ]),
+    ], 'All grade levels'),
     Season('2024-2025', 'Student Council', DateTime(2025, 2, 11, 8), DateTime(2025, 2, 13, 17), 165, 121, const [
       SeasonWinner('President', 'Rico Velasco', 'Bagong Sigla', 64),
       SeasonWinner('Vice President', 'Ana Robles', 'Bagong Sigla', 59),
-    ]),
+    ], 'Grade 9 to Grade 12'),
   ];
 
   // ---------- seasons ----------
@@ -181,6 +206,59 @@ class AppState extends ChangeNotifier {
     return e == null ? '' : '${e.club}, ${e.schoolYear}';
   }
 
+  /// The season admin stats and the Not voted tab refer to.
+  Election? get currentElection =>
+      activeElection ?? (pendingTally.isNotEmpty ? pendingTally.first : null);
+
+  /// The open season this student is allowed to vote in.
+  Election? activeFor(Student? s) {
+    if (s == null) return null;
+    for (final e in elections) {
+      if (e.status == ElectionStatus.open && e.allows(s)) return e;
+    }
+    return null;
+  }
+
+  /// The soonest upcoming season this student is allowed to vote in.
+  Election? nextFor(Student? s) {
+    if (s == null) return null;
+    final list = elections
+        .where((e) => e.status == ElectionStatus.upcoming && e.allows(s))
+        .toList()
+      ..sort((a, b) => a.startDate.compareTo(b.startDate));
+    return list.isEmpty ? null : list.first;
+  }
+
+  bool pendingTallyFor(Student? s) => s != null && pendingTally.any((e) => e.allows(s));
+
+  String gradeName(int id) {
+    for (final g in gradeLevels) {
+      if (g.id == id) return g.name;
+    }
+    return 'Unknown';
+  }
+
+  /// "All grade levels", or ranges like "Grade 11 to Tertiary Year 2".
+  String levelsLabel(Set<int> ids) {
+    if (ids.length == gradeLevels.length) return 'All grade levels';
+    final sorted = ids.toList()..sort();
+    final parts = <String>[];
+    int i = 0;
+    while (i < sorted.length) {
+      int j = i;
+      while (j + 1 < sorted.length && sorted[j + 1] == sorted[j] + 1) {
+        j++;
+      }
+      parts.add(i == j ? gradeName(sorted[i]) : '${gradeName(sorted[i])} to ${gradeName(sorted[j])}');
+      i = j + 1;
+    }
+    return parts.join(', ');
+  }
+
+  int eligibleCount(Election e) => students.where(e.allows).length;
+
+  int votedIn(Election e) => students.where((s) => e.allows(s) && s.hasVoted).length;
+
   /// Re-notify listeners (used when a countdown reaches zero and a status changes).
   void touch() => notifyListeners();
 
@@ -191,9 +269,11 @@ class AppState extends ChangeNotifier {
     required String club,
     required DateTime start,
     required DateTime end,
+    required Set<int> levels,
   }) {
     final name = club.trim();
     if (name.isEmpty) return 'Enter a club name.';
+    if (levels.isEmpty) return 'Pick at least one grade level that can vote.';
     if (!end.isAfter(start)) return 'The closing time must be after the opening time.';
     final dup = elections.any((e) =>
             e.id != id && e.club.toLowerCase() == name.toLowerCase() && e.schoolYear == schoolYear) ||
@@ -201,13 +281,14 @@ class AppState extends ChangeNotifier {
     if (dup) return '$name already has a season for $schoolYear.';
     if (id == null) {
       final nextId = elections.isEmpty ? 1 : elections.map((e) => e.id).reduce((a, b) => a > b ? a : b) + 1;
-      elections.add(Election(nextId, schoolYear, name, start, end));
+      elections.add(Election(nextId, schoolYear, name, start, end, {...levels}));
     } else {
       final e = elections.firstWhere((x) => x.id == id);
       e.schoolYear = schoolYear;
       e.club = name;
       e.startDate = start;
       e.endDate = end;
+      e.levelIds = {...levels};
     }
     if (!clubs.any((c) => c.toLowerCase() == name.toLowerCase())) clubs.add(name);
     notifyListeners();
@@ -231,7 +312,10 @@ class AppState extends ChangeNotifier {
       final w = winnerFor(p.id);
       winners.add(SeasonWinner(p.title, w.name, w.partyList, votesFor(w.id)));
     }
-    history.insert(0, Season(e.schoolYear, e.club, e.startDate, e.endDate, students.length, votedCount, winners));
+    history.insert(
+        0,
+        Season(e.schoolYear, e.club, e.startDate, e.endDate, eligibleCount(e), votedIn(e), winners,
+            levelsLabel(e.levelIds)));
     elections.removeWhere((x) => x.id == e.id);
     tally.clear();
     selections.clear();
@@ -254,13 +338,13 @@ class AppState extends ChangeNotifier {
   int get votedCount => students.where((s) => s.hasVoted).length;
 
   /// Returns an error message, or null on success.
-  String? addStudent({required String studentNum, required String fullName, required int gradeLevel}) {
+  String? addStudent({required String studentNum, required String fullName, required int gradeLevelId}) {
     final num = studentNum.trim();
     final name = fullName.trim();
     if (num.isEmpty || name.isEmpty) return 'Enter the student number and full name.';
     if (students.any((s) => s.studentNum == num)) return 'A student with that number already exists.';
     final id = students.isEmpty ? 1 : students.map((s) => s.id).reduce((a, b) => a > b ? a : b) + 1;
-    students.add(Student(id, num, name, gradeLevel));
+    students.add(Student(id, num, name, gradeLevelId));
     notifyListeners();
     return null;
   }

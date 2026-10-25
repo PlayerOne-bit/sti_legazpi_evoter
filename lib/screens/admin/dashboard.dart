@@ -20,8 +20,9 @@ class DashboardPage extends StatelessWidget {
     return ListenableBuilder(
       listenable: state,
       builder: (context, _) {
-        final total = state.students.length;
-        final voted = state.votedCount;
+        final cur = state.currentElection;
+        final total = cur == null ? state.students.length : state.eligibleCount(cur);
+        final voted = cur == null ? state.votedCount : state.votedIn(cur);
         final pct = total == 0 ? 0 : (voted * 100 / total).round();
         final next = state.nextElection;
         final current = <Election>[
@@ -58,7 +59,7 @@ class DashboardPage extends StatelessWidget {
             const SizedBox(height: 18),
             Row(
               children: [
-                Expanded(child: _Stat('Students', '$total')),
+                Expanded(child: _Stat(cur == null ? 'Students' : 'Eligible', '$total')),
                 const SizedBox(width: 10),
                 Expanded(child: _Stat('Voted', '$voted')),
                 const SizedBox(width: 10),
