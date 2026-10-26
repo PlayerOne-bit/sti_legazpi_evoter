@@ -16,7 +16,7 @@ class SeasonManagerPage extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         title: Text('Delete ${e.club} ${e.schoolYear}?'),
         content: const Text(
-            'This season has not started, so nothing is lost except its schedule.'),
+            'This season has not started, so nothing is lost except its schedule, positions, and candidates.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),

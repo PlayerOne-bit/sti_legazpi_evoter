@@ -37,7 +37,7 @@ Future<void> showStudentForm(BuildContext context) async {
                     decoration: const InputDecoration(labelText: 'Full name')),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<int>(
-                  value: grade,
+                  initialValue: grade,
                   decoration: const InputDecoration(labelText: 'Grade level'),
                   items: [
                     for (final g in state.gradeLevels)
@@ -55,7 +55,7 @@ Future<void> showStudentForm(BuildContext context) async {
                         'No programs yet. Add programs first, then add this student.')
                   else
                     DropdownButtonFormField<int>(
-                      value: programId,
+                      initialValue: programId,
                       isExpanded: true,
                       decoration: const InputDecoration(labelText: 'Program'),
                       items: [

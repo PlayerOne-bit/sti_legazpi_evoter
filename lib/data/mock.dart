@@ -314,7 +314,8 @@ class AppState extends ChangeNotifier {
   int? adminCandElectionId;
   List<Position> adminPositions = [];
   List<Candidate> adminCandidates = [];
-
+  List<Candidate> adminCandidatesFor(int positionId) =>
+      adminCandidates.where((c) => c.positionId == positionId).toList();
   Future<void> loadAdmin() async {
     try {
       final r = await Future.wait([

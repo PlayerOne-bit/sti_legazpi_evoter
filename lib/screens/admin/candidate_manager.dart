@@ -41,7 +41,7 @@ class _CandidateManagerPageState extends State<CandidateManagerPage> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<int>(
-                    value: pos,
+                    initialValue: pos,
                     decoration: const InputDecoration(labelText: 'Position'),
                     items: [
                       for (final p in state.adminPositions)
@@ -129,7 +129,7 @@ class _CandidateManagerPageState extends State<CandidateManagerPage> {
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
           children: [
             DropdownButtonFormField<int>(
-              value: e.id,
+              initialValue: e.id,
               decoration: const InputDecoration(labelText: 'Season'),
               items: [
                 for (final x in list)
