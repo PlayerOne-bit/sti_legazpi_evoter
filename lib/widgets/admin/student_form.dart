@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/mock.dart';
 
 /// Dialog for adding a student to the voter list.
+/// Tertiary students must have a program. Grade 7 to 12 students have none.
 Future<void> showStudentForm(BuildContext context) async {
   final numCtl = TextEditingController();
   final nameCtl = TextEditingController();
@@ -9,6 +10,7 @@ Future<void> showStudentForm(BuildContext context) async {
   int grade = 6; // Grade 12
   int? programId;
   String? error;
+  bool saving = false;
 
   bool isTertiary(int id) =>
       state.gradeLevels.firstWhere((g) => g.id == id).tertiary;
@@ -33,11 +35,12 @@ Future<void> showStudentForm(BuildContext context) async {
                 ),
                 const SizedBox(height: 12),
                 TextField(
-                    controller: nameCtl,
-                    decoration: const InputDecoration(labelText: 'Full name')),
+                  controller: nameCtl,
+                  decoration: const InputDecoration(labelText: 'Full name'),
+                ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<int>(
-                  initialValue: grade,
+                  value: grade,
                   decoration: const InputDecoration(labelText: 'Grade level'),
                   items: [
                     for (final g in state.gradeLevels)
@@ -55,7 +58,7 @@ Future<void> showStudentForm(BuildContext context) async {
                         'No programs yet. Add programs first, then add this student.')
                   else
                     DropdownButtonFormField<int>(
-                      initialValue: programId,
+                      value: programId,
                       isExpanded: true,
                       decoration: const InputDecoration(labelText: 'Program'),
                       items: [
@@ -91,31 +94,44 @@ Future<void> showStudentForm(BuildContext context) async {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            onPressed: saving ? null : () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
-            onPressed: () async {
-              if (passCtl.text.length < 6) {
-                setS(() => error = 'The password needs at least 6 characters.');
-                return;
-              }
-              if (isTertiary(grade) && programId == null) {
-                setS(() => error = 'Pick a program for tertiary students.');
-                return;
-              }
-              final err = await state.addStudent(
-                studentNum: numCtl.text,
-                fullName: nameCtl.text,
-                gradeLevelId: grade,
-                password: passCtl.text,
-                programId: programId,
-              );
-              if (err != null) {
-                setS(() => error = err);
-                return;
-              }
-              if (ctx.mounted) Navigator.pop(ctx);
-            },
-            child: const Text('Add student'),
+            onPressed: saving
+                ? null
+                : () async {
+                    if (passCtl.text.length < 6) {
+                      setS(() =>
+                          error = 'The password needs at least 6 characters.');
+                      return;
+                    }
+                    if (isTertiary(grade) && programId == null) {
+                      setS(() =>
+                          error = 'Pick a program for tertiary students.');
+                      return;
+                    }
+                    setS(() {
+                      saving = true;
+                      error = null;
+                    });
+                    final err = await state.addStudent(
+                      studentNum: numCtl.text,
+                      fullName: nameCtl.text,
+                      gradeLevelId: grade,
+                      password: passCtl.text,
+                      programId: programId,
+                    );
+                    if (err != null) {
+                      setS(() {
+                        saving = false;
+                        error = err;
+                      });
+                      return;
+                    }
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  },
+            child: Text(saving ? 'Adding...' : 'Add student'),
           ),
         ],
       ),
