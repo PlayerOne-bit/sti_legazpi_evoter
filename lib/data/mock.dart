@@ -314,8 +314,7 @@ class AppState extends ChangeNotifier {
   int? adminCandElectionId;
   List<Position> adminPositions = [];
   List<Candidate> adminCandidates = [];
-  List<Candidate> adminCandidatesFor(int positionId) =>
-      adminCandidates.where((c) => c.positionId == positionId).toList();
+
   Future<void> loadAdmin() async {
     try {
       final r = await Future.wait([
@@ -421,6 +420,9 @@ class AppState extends ChangeNotifier {
   Election? get currentElection =>
       activeElection ?? (pendingTally.isNotEmpty ? pendingTally.first : null);
 
+  /// Id of the season that the last saveElection call created or updated.
+  int? savedElectionId;
+
   Future<String?> saveElection({
     int? id,
     required String schoolYear,
@@ -438,9 +440,11 @@ class AppState extends ChangeNotifier {
     };
     try {
       if (id == null) {
-        await Api.post('/api/admin/elections', body);
+        final j = await Api.post('/api/admin/elections', body);
+        savedElectionId = j is Map ? j['id'] as int? : null;
       } else {
         await Api.put('/api/admin/elections/$id', body);
+        savedElectionId = id;
       }
       await refreshAdmin();
       return null;
@@ -563,6 +567,41 @@ class AppState extends ChangeNotifier {
         'motto': motto.trim(),
       });
       await loadAdminCandidates(electionId);
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    }
+  }
+
+  /// Search students by name or student number (used by the season form).
+  /// Throws ApiException when the server cannot be reached.
+  Future<List<Student>> searchStudents(String query, {int limit = 8}) async {
+    final term = query.trim();
+    if (term.isEmpty) return [];
+    final r = await Api.get(
+        '/api/admin/students?search=${Uri.encodeQueryComponent(term)}&pageSize=$limit');
+    return [
+      for (final s in r['items'] as List)
+        Student(s['id'], s['studentNum'], s['fullName'], s['gradeLevelId'],
+            programId: s['programId'], programCode: s['programCode']),
+    ];
+  }
+
+  /// Adds a candidate by student id. Unlike addCandidate it does not reload the list.
+  Future<String?> addCandidateFor({
+    required int electionId,
+    required int studentId,
+    required int positionId,
+    String partyList = '',
+    String motto = '',
+  }) async {
+    try {
+      await Api.post('/api/admin/elections/$electionId/candidates', {
+        'studentId': studentId,
+        'positionId': positionId,
+        'partyList': partyList.trim(),
+        'motto': motto.trim(),
+      });
       return null;
     } on ApiException catch (e) {
       return e.message;
