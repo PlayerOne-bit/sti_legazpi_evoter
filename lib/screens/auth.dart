@@ -18,13 +18,26 @@ class _AuthPageState extends State<AuthPage> {
   bool hide = true;
   bool busy = false;
   String? error;
-  final _user = TextEditingController();
-  final _pass = TextEditingController();
+  // Student credentials
+  final _studentUser = TextEditingController();
+  final _studentPass = TextEditingController();
+
+// Admin credentials
+  final _adminUser = TextEditingController();
+  final _adminPass = TextEditingController();
+
+// Get the currently active controllers
+  TextEditingController get _user => admin ? _adminUser : _studentUser;
+  TextEditingController get _pass => admin ? _adminPass : _studentPass;
 
   @override
   void dispose() {
-    _user.dispose();
-    _pass.dispose();
+    _studentUser.dispose();
+    _studentPass.dispose();
+
+    _adminUser.dispose();
+    _adminPass.dispose();
+
     super.dispose();
   }
 
@@ -84,18 +97,38 @@ class _AuthPageState extends State<AuthPage> {
         children: [
           SegmentedButton<bool>(
             segments: const [
-              ButtonSegment(value: false, label: Text('Student')),
-              ButtonSegment(value: true, label: Text('Admin')),
+              ButtonSegment(
+                value: false,
+                label: Text('Student'),
+                icon: Icon(Icons.school),
+              ),
+              ButtonSegment(
+                value: true,
+                label: Text('Admin'),
+                icon: Icon(Icons.admin_panel_settings),
+              ),
             ],
             selected: {admin},
-            onSelectionChanged: (s) => setState(() => admin = s.first),
+            onSelectionChanged: busy
+                ? null
+                : (s) {
+                    setState(() {
+                      admin = s.first;
+                      error = null;
+                      hide = true;
+                    });
+                  },
           ),
           const SizedBox(height: 20),
           TextField(
             controller: _user,
             textInputAction: TextInputAction.next,
             decoration: InputDecoration(
-                labelText: admin ? 'Username' : 'Student number'),
+              labelText: admin ? 'Username' : 'Student number',
+              prefixIcon: Icon(
+                admin ? Icons.admin_panel_settings : Icons.school,
+              ),
+            ),
           ),
           const SizedBox(height: 14),
           TextField(
@@ -104,8 +137,11 @@ class _AuthPageState extends State<AuthPage> {
             onSubmitted: (_) => _submit(),
             decoration: InputDecoration(
               labelText: 'Password',
+              prefixIcon: const Icon(Icons.lock_outline),
               suffixIcon: IconButton(
-                icon: Icon(hide ? Icons.visibility_off : Icons.visibility),
+                icon: Icon(
+                  hide ? Icons.visibility_off : Icons.visibility,
+                ),
                 onPressed: () => setState(() => hide = !hide),
               ),
             ),
