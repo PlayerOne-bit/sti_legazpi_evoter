@@ -183,7 +183,8 @@ Future<void> showElectionForm(BuildContext context,
           final s = selected;
           if (s == null) return;
           setS(() {
-            picks.add(_Pick(s, position, partyCtl.text.trim(), mottoCtl.text.trim()));
+            picks.add(
+                _Pick(s, position, partyCtl.text.trim(), mottoCtl.text.trim()));
             selected = null;
             results = [];
             searchCtl.clear();
@@ -198,8 +199,10 @@ Future<void> showElectionForm(BuildContext context,
             if (!removed.contains(c.id)) c.studentNum,
           for (final p in picks) p.student.studentNum,
         };
-        final shown = results.where((s) => !taken.contains(s.studentNum)).toList();
-        final keptCurrent = current.where((c) => !removed.contains(c.id)).toList();
+        final shown =
+            results.where((s) => !taken.contains(s.studentNum)).toList();
+        final keptCurrent =
+            current.where((c) => !removed.contains(c.id)).toList();
 
         return AlertDialog(
           title: Text(
@@ -212,7 +215,7 @@ Future<void> showElectionForm(BuildContext context,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   DropdownButtonFormField<String>(
-                    value: year,
+                    initialValue: year,
                     decoration: const InputDecoration(labelText: 'School year'),
                     items: [
                       for (final y in state.schoolYears)
@@ -328,9 +331,8 @@ Future<void> showElectionForm(BuildContext context,
                         name: c.name,
                         subtitle: _subtitle(titleOf(c.positionId), c.partyList),
                         isNew: false,
-                        onRemove: saving
-                            ? null
-                            : () => setS(() => removed.add(c.id)),
+                        onRemove:
+                            saving ? null : () => setS(() => removed.add(c.id)),
                       ),
                     for (final p in picks)
                       _CandidateTile(
@@ -430,7 +432,8 @@ Future<void> showElectionForm(BuildContext context,
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(selected!.fullName,
                                           maxLines: 1,
@@ -452,7 +455,7 @@ Future<void> showElectionForm(BuildContext context,
                             ),
                             const SizedBox(height: 10),
                             DropdownButtonFormField<String>(
-                              value: position,
+                              initialValue: position,
                               decoration:
                                   const InputDecoration(labelText: 'Position'),
                               items: [
@@ -464,8 +467,8 @@ Future<void> showElectionForm(BuildContext context,
                             const SizedBox(height: 10),
                             TextField(
                               controller: partyCtl,
-                              decoration:
-                                  const InputDecoration(labelText: 'Party list'),
+                              decoration: const InputDecoration(
+                                  labelText: 'Party list'),
                             ),
                             const SizedBox(height: 10),
                             TextField(
@@ -552,7 +555,8 @@ Future<void> showElectionForm(BuildContext context,
   debounce?.cancel();
   final message = notice;
   if (message != null && context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -621,7 +625,9 @@ class _CandidateTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20)),
               child: const Text('New',
                   style: TextStyle(
-                      color: C.blue, fontSize: 11, fontWeight: FontWeight.w700)),
+                      color: C.blue,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700)),
             ),
           IconButton(
             tooltip: 'Remove candidate',
