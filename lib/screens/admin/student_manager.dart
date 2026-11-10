@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import '../../data/api.dart';
+import '../../data/excel_io.dart';
 import '../../data/mock.dart';
 import '../../theme.dart';
 import '../../widgets/admin/student_card.dart';
 import '../../widgets/admin/student_form.dart';
 
-/// Student list: create, read (search + two tabs), delete (not for students who voted).
+enum _ExcelAction { importFile, exportList, template }
+
+/// Student list: create, read (search + two tabs), delete (not for students who voted),
+/// import from Excel (.xls or .xlsx) and export to Excel.
 class StudentManagerPage extends StatefulWidget {
   const StudentManagerPage({super.key});
 
@@ -14,6 +19,36 @@ class StudentManagerPage extends StatefulWidget {
 
 class _StudentManagerPageState extends State<StudentManagerPage> {
   String q = '';
+  bool busy = false;
+
+  void _toast(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  Future<void> _excel(_ExcelAction action) async {
+    if (busy) return;
+    setState(() => busy = true);
+    try {
+      switch (action) {
+        case _ExcelAction.importFile:
+          final result = await ExcelIo.pickAndImport();
+          if (result != null) {
+            await state.refreshAdmin();
+            if (mounted) await showImportResult(context, result);
+          }
+        case _ExcelAction.exportList:
+          _toast(await ExcelIo.saveStudents(
+              electionId: state.currentElection?.id));
+        case _ExcelAction.template:
+          _toast(await ExcelIo.saveTemplate());
+      }
+    } on ApiException catch (e) {
+      _toast(e.message);
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
 
   Future<void> _delete(Student s) async {
     final ok = await showDialog<bool>(
@@ -100,6 +135,32 @@ class _StudentManagerPageState extends State<StudentManagerPage> {
                       ),
                     ),
                     const SizedBox(width: 10),
+                    if (busy)
+                      const SizedBox(
+                        width: 52,
+                        height: 52,
+                        child: Padding(
+                          padding: EdgeInsets.all(14),
+                          child: CircularProgressIndicator(strokeWidth: 3),
+                        ),
+                      )
+                    else
+                      PopupMenuButton<_ExcelAction>(
+                        tooltip: 'Excel',
+                        icon: const Icon(Icons.table_view, color: C.blue),
+                        onSelected: _excel,
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(
+                              value: _ExcelAction.importFile,
+                              child: Text('Import students (.xls, .xlsx)')),
+                          PopupMenuItem(
+                              value: _ExcelAction.exportList,
+                              child: Text('Export student list')),
+                          PopupMenuItem(
+                              value: _ExcelAction.template,
+                              child: Text('Download template')),
+                        ],
+                      ),
                     IconButton.filled(
                       tooltip: 'Add student',
                       style: IconButton.styleFrom(
