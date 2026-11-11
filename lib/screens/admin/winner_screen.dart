@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../data/excel_io.dart';
 import '../../data/mock.dart';
 import '../../widgets/blue_button.dart';
 import '../../widgets/centered_body.dart';
@@ -16,6 +17,7 @@ class _WinnerScreenState extends State<WinnerScreen> {
   late final Future<List<PositionTally>> _tally =
       state.fetchAdminTally(widget.election.id);
   bool _busy = false;
+  bool _exporting = false;
 
   Future<void> _close() async {
     setState(() => _busy = true);
@@ -25,6 +27,16 @@ class _WinnerScreenState extends State<WinnerScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(err ?? 'Season saved to history.')));
     if (err == null) Navigator.of(context).pop();
+  }
+
+  Future<void> _export() async {
+    final e = widget.election;
+    setState(() => _exporting = true);
+    final msg = await ExcelIo.saveResults(
+        e.id, '${e.club}-${e.schoolYear}-results.xlsx');
+    if (!mounted) return;
+    setState(() => _exporting = false);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   @override
@@ -59,10 +71,24 @@ class _WinnerScreenState extends State<WinnerScreen> {
           maxWidth: 800,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-            child: BlueButton(
-              label: _busy ? 'Closing...' : 'Close season and save to history',
-              icon: Icons.save_alt,
-              onPressed: _busy ? null : _close,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                BlueButton(
+                  label:
+                      _exporting ? 'Exporting...' : 'Export results to Excel',
+                  icon: Icons.download,
+                  outlined: true,
+                  onPressed: _exporting ? null : _export,
+                ),
+                const SizedBox(height: 10),
+                BlueButton(
+                  label:
+                      _busy ? 'Closing...' : 'Close season and save to history',
+                  icon: Icons.save_alt,
+                  onPressed: _busy ? null : _close,
+                ),
+              ],
             ),
           ),
         ),

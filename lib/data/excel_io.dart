@@ -84,6 +84,10 @@ class ExcelIo {
       '/api/admin/students/export${electionId == null ? '' : '?electionId=$electionId'}',
       'sti-evoter-students.xlsx');
 
+  /// Results of a finished season (History id).
+  static Future<String> saveHistory(int historyId) =>
+      save('/api/admin/history/$historyId/export', 'sti-evoter-results.xlsx');
+
   static Future<String> saveResults(int electionId, String fileName) =>
       save('/api/admin/elections/$electionId/export', fileName);
 
