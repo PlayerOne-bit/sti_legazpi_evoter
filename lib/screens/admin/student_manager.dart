@@ -5,6 +5,7 @@ import '../../data/mock.dart';
 import '../../theme.dart';
 import '../../widgets/admin/student_card.dart';
 import '../../widgets/admin/student_form.dart';
+import '../../widgets/admin/student_password_dialog.dart';
 
 enum _ExcelAction { importFile, exportList, template }
 
@@ -96,7 +97,11 @@ class _StudentManagerPageState extends State<StudentManagerPage> {
       children: [
         for (final s in list)
           StudentCard(
-              student: s, onDelete: s.hasVoted ? null : () => _delete(s)),
+            student: s,
+            onDelete: s.hasVoted ? null : () => _delete(s),
+            onPassword: () => showStudentPassword(context,
+                id: s.id, name: s.fullName, studentNum: s.studentNum),
+          ),
       ],
     );
   }
