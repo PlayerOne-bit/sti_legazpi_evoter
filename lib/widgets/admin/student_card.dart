@@ -4,10 +4,13 @@ import '../../theme.dart';
 
 /// One row of the student list. Swap this widget when the table design changes.
 /// [onDelete] is only offered for students who have not voted.
+/// [onPassword] shows the student's password.
 class StudentCard extends StatelessWidget {
   final Student student;
   final VoidCallback? onDelete;
-  const StudentCard({super.key, required this.student, this.onDelete});
+  final VoidCallback? onPassword;
+  const StudentCard(
+      {super.key, required this.student, this.onDelete, this.onPassword});
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +58,12 @@ class StudentCard extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     color: v ? C.ok : C.muted)),
           ),
+          if (onPassword != null)
+            IconButton(
+              tooltip: 'Show password',
+              icon: const Icon(Icons.key_outlined),
+              onPressed: onPassword,
+            ),
           if (v)
             const Tooltip(
               message: 'Students who voted cannot be deleted',

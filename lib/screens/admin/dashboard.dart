@@ -1,19 +1,36 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../data/api.dart';
 import '../../data/mock.dart';
 import '../../theme.dart';
-import '../../widgets/admin/election_card.dart';
 import '../../widgets/blue_button.dart';
-import '../../widgets/doomsday_timer.dart';
 import 'winner_screen.dart';
 
+/// Admin home: turnout numbers and every season that is open, waiting for its tally,
+/// or still to come, each with a live timer.
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
 
-  void _note(BuildContext context, String msg) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-
   void _close(BuildContext context, Election e) => Navigator.of(context)
       .push(MaterialPageRoute(builder: (_) => WinnerScreen(election: e)));
+
+  /// Open seasons first (closing soonest), then seasons waiting for a tally,
+  /// then upcoming seasons (starting soonest).
+  List<Election> _seasons() {
+    int rank(Election e) => switch (e.status) {
+          ElectionStatus.open => 0,
+          ElectionStatus.ended => 1,
+          ElectionStatus.upcoming => 2,
+        };
+    DateTime when(Election e) =>
+        e.status == ElectionStatus.upcoming ? e.startDate : e.endDate;
+    final list = [...state.elections];
+    list.sort((a, b) {
+      final r = rank(a).compareTo(rank(b));
+      return r != 0 ? r : when(a).compareTo(when(b));
+    });
+    return list;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,41 +41,10 @@ class DashboardPage extends StatelessWidget {
         final total = state.dashEligible;
         final voted = state.dashVoted;
         final pct = total == 0 ? 0 : (voted * 100 / total).round();
-        final next = state.nextElection;
-        final current = <Election>[
-          if (state.activeElection != null) state.activeElection!,
-          ...state.pendingTally,
-        ];
+        final seasons = _seasons();
         return ListView(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
           children: [
-            if (next != null)
-              DoomsdayTimer(
-                key: ValueKey(
-                    'next-${next.id}-${next.startDate.millisecondsSinceEpoch}'),
-                label: 'Next voting season starts in',
-                finishedLabel: 'A voting season is starting',
-                end: next.startDate,
-                subtitle: '${next.club}, ${next.schoolYear}',
-                onFinished: state.touch,
-              )
-            else
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: cardBox(),
-                child: const Row(
-                  children: [
-                    Icon(Icons.event_busy, color: C.muted),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                          'No upcoming voting season. Create one in the Seasons tab.',
-                          style: TextStyle(fontWeight: FontWeight.w600)),
-                    ),
-                  ],
-                ),
-              ),
-            const SizedBox(height: 18),
             Row(
               children: [
                 Expanded(
@@ -70,39 +56,263 @@ class DashboardPage extends StatelessWidget {
                 Expanded(child: _Stat('Turnout', '$pct%', accent: true)),
               ],
             ),
-            if (current.isNotEmpty) ...[
-              const SizedBox(height: 22),
-              const Text('Current season',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 12),
-              for (final e in current)
-                ElectionCard(election: e, onClose: () => _close(context, e)),
-            ],
-            const SizedBox(height: 10),
-            const Text('Excel',
+            const SizedBox(height: 22),
+            const Text('Voting seasons',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 4),
-            const Text('Uses the school template for students and candidates.',
-                style: TextStyle(color: C.muted)),
             const SizedBox(height: 12),
-            BlueButton(
-              label: 'Import students and candidates',
-              icon: Icons.upload_file,
-              outlined: true,
-              onPressed: () => _note(context,
-                  'Prototype: file picker will connect to the backend import.'),
-            ),
-            const SizedBox(height: 10),
-            BlueButton(
-              label: 'Export results',
-              icon: Icons.download,
-              outlined: true,
-              onPressed: () => _note(context,
-                  'Prototype: results export will come from the backend.'),
-            ),
+            if (seasons.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: cardBox(),
+                child: const Row(
+                  children: [
+                    Icon(Icons.event_busy, color: C.muted),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                          'No open or upcoming voting season. Create one in the Seasons tab.',
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                    ),
+                  ],
+                ),
+              )
+            else
+              for (final e in seasons)
+                _SeasonTimerCard(
+                  // A new key restarts the timer when the season changes status or dates.
+                  key: ValueKey(
+                      '${e.id}-${e.status.name}-${e.startDate.millisecondsSinceEpoch}-${e.endDate.millisecondsSinceEpoch}'),
+                  election: e,
+                  onFinished: state.touch,
+                  onClose: () => _close(context, e),
+                ),
           ],
         );
       },
+    );
+  }
+}
+
+/// One season with a countdown: "Starts in" for upcoming, "Closes in" for open.
+/// A season that has ended shows a prompt to count the votes instead.
+class _SeasonTimerCard extends StatefulWidget {
+  final Election election;
+  final VoidCallback onFinished;
+  final VoidCallback onClose;
+  const _SeasonTimerCard({
+    super.key,
+    required this.election,
+    required this.onFinished,
+    required this.onClose,
+  });
+
+  @override
+  State<_SeasonTimerCard> createState() => _SeasonTimerCardState();
+}
+
+class _SeasonTimerCardState extends State<_SeasonTimerCard> {
+  // Fixed for this card's lifetime; the parent swaps the card (new key) when the status changes.
+  late final ElectionStatus _status = widget.election.status;
+  Timer? _timer;
+  Duration _left = Duration.zero;
+  bool _fired = false;
+
+  DateTime? get _target => switch (_status) {
+        ElectionStatus.upcoming => widget.election.startDate,
+        ElectionStatus.open => widget.election.endDate,
+        ElectionStatus.ended => null,
+      };
+
+  void _tick() {
+    final target = _target;
+    if (target == null) return;
+    _left = target.difference(Api.now);
+    if (_left <= Duration.zero && !_fired) {
+      _fired = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) widget.onFinished();
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (_target != null) {
+      _tick();
+      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(_tick);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Widget _chip() {
+    final (String label, Color bg, Color fg) = switch (_status) {
+      ElectionStatus.upcoming => ('Upcoming', const Color(0xFFE3ECF8), C.blue),
+      ElectionStatus.open => ('Open now', const Color(0xFFE7F5EE), C.ok),
+      ElectionStatus.ended => (
+          'Tally pending',
+          const Color(0xFFFFF3C4),
+          const Color(0xFF8A6500)
+        ),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration:
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+      child: Text(label,
+          style:
+              TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: fg)),
+    );
+  }
+
+  Widget _countdown() {
+    final left = _left <= Duration.zero ? Duration.zero : _left;
+    String two(int n) => n.toString().padLeft(2, '0');
+    final label =
+        _status == ElectionStatus.upcoming ? 'Starts in' : 'Closes in';
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+      decoration:
+          BoxDecoration(color: C.navy, borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                      color: C.yellow, shape: BoxShape.circle)),
+              const SizedBox(width: 8),
+              Text(label,
+                  style: const TextStyle(
+                      color: Colors.white70, fontWeight: FontWeight.w600)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _Unit(two(left.inDays), 'days'),
+              _Unit(two(left.inHours % 24), 'hours'),
+              _Unit(two(left.inMinutes % 60), 'minutes'),
+              _Unit(two(left.inSeconds % 60), 'seconds', hot: true),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _info(IconData icon, String text) => Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 18, color: C.muted),
+            const SizedBox(width: 8),
+            Expanded(child: Text(text)),
+          ],
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final e = widget.election;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: cardBox(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(e.club,
+                        style: const TextStyle(
+                            fontSize: 17, fontWeight: FontWeight.w800)),
+                    Text('School year ${e.schoolYear}',
+                        style: const TextStyle(color: C.muted)),
+                  ],
+                ),
+              ),
+              _chip(),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_status == ElectionStatus.ended)
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3C4),
+                  borderRadius: BorderRadius.circular(12)),
+              child: const Row(
+                children: [
+                  Icon(Icons.hourglass_bottom, color: Color(0xFF8A6500)),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                        'Voting has ended. Count the votes to see the winners.',
+                        style: TextStyle(
+                            color: Color(0xFF8A6500),
+                            fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+            )
+          else
+            _countdown(),
+          const SizedBox(height: 6),
+          _info(Icons.play_circle_outline, 'Opens ${fmtDate(e.startDate)}'),
+          _info(Icons.stop_circle_outlined, 'Closes ${fmtDate(e.endDate)}'),
+          _info(Icons.groups_outlined,
+              'Open to ${state.levelsLabel(e.levelIds)}'),
+          if (_status == ElectionStatus.ended) ...[
+            const SizedBox(height: 14),
+            BlueButton(
+                label: 'Close season and tally votes',
+                icon: Icons.emoji_events,
+                onPressed: widget.onClose),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Unit extends StatelessWidget {
+  final String value;
+  final String label;
+  final bool hot;
+  const _Unit(this.value, this.label, {this.hot = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(value,
+              style: TextStyle(
+                color: hot ? C.yellow : Colors.white,
+                fontSize: MediaQuery.sizeOf(context).width >= 700 ? 40 : 30,
+                fontWeight: FontWeight.w800,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              )),
+          Text(label,
+              style: const TextStyle(color: Colors.white60, fontSize: 12)),
+        ],
+      ),
     );
   }
 }
