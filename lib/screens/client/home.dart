@@ -10,6 +10,16 @@ import '../result_screen.dart';
 import 'vote_screen.dart';
 import '../../widgets/loading_view.dart';
 
+/// "ACOSTA,ANGELINA KATE MILLENA" -> "Angelina". Also handles "Angelina Acosta".
+String _firstName(String full) {
+  final t = full.trim();
+  final comma = t.indexOf(',');
+  final given = comma >= 0 ? t.substring(comma + 1).trim() : t;
+  final word = given.split(RegExp(r'\s+')).first;
+  if (word.isEmpty) return 'there';
+  return word[0].toUpperCase() + word.substring(1).toLowerCase();
+}
+
 class ClientHome extends StatefulWidget {
   const ClientHome({super.key});
 
@@ -49,6 +59,7 @@ class _ClientHomeState extends State<ClientHome> {
           );
         }
         final me = state.me;
+        final first = me == null ? 'there' : _firstName(me.fullName);
         final active = state.homeActive;
         final next = state.homeNext;
         final openForOthers = state.homeOpenForOthers;
@@ -57,20 +68,15 @@ class _ClientHomeState extends State<ClientHome> {
             openForOthers == null &&
             !waitingTally &&
             next == null;
-
-        // Candidates are only shown while a season is in progress or still to come.
-        final hasSeason =
-            active != null || openForOthers != null || next != null;
-        final positions = [
-          for (final p in state.positions)
-            if (state.candidatesFor(p.id).isNotEmpty) p,
-        ];
-        final showCandidates = hasSeason && positions.isNotEmpty;
+        // Candidates are only worth showing while a season is in progress or still to come.
+        final showCandidates =
+            (active != null || openForOthers != null || next != null) &&
+                state.positions.isNotEmpty;
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('STI eVoter',
-                style: TextStyle(fontWeight: FontWeight.w800)),
+            title: Text('Hi, $first',
+                style: const TextStyle(fontWeight: FontWeight.w800)),
             actions: [
               IconButton(
                   tooltip: 'Refresh',
@@ -90,16 +96,66 @@ class _ClientHomeState extends State<ClientHome> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
                 children: [
-                  if (me != null) _ProfileCard(me),
-                  const SizedBox(height: 20),
+                  if (me != null) _ProfileStrip(student: me),
+                  const SizedBox(height: 18),
 
                   // 1. The ongoing season (counts down to when voting closes)
-                  if (active != null)
-                    _OpenSeasonCard(
-                      election: active,
-                      hasVoted: state.hasVoted,
-                    )
-                  else if (openForOthers != null)
+                  if (active != null) ...[
+                    _SectionHeader(
+                      title: '${active.club} election',
+                      subtitle: 'School year ${active.schoolYear}',
+                      chipLabel: 'Voting open',
+                      chipBg: const Color(0xFFE7F5EE),
+                      chipFg: C.ok,
+                    ),
+                    const SizedBox(height: 12),
+                    DoomsdayTimer(
+                      key: ValueKey(
+                          'close-${active.id}-${active.endDate.millisecondsSinceEpoch}'),
+                      end: active.endDate,
+                      onFinished: state.refreshSoon,
+                    ),
+                    const SizedBox(height: 14),
+                    if (state.hasVoted)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: cardBox(
+                            color: const Color(0xFFE7F5EE),
+                            border: const Color(0xFFB9E2CD)),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Row(children: [
+                              Icon(Icons.check_circle, color: C.ok),
+                              SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                    'Your ballot is in. Thanks for voting.',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.w700)),
+                              ),
+                            ]),
+                            const SizedBox(height: 12),
+                            BlueButton(
+                              label: 'See live tally',
+                              icon: Icons.bar_chart,
+                              outlined: true,
+                              onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                      builder: (_) => const ResultScreen())),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      BlueButton(
+                        label: 'Cast your vote',
+                        icon: Icons.how_to_vote,
+                        onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => const VoteScreen())),
+                      ),
+                  ] else if (openForOthers != null)
                     _Notice(
                       icon: Icons.info_outline,
                       title: '${openForOthers.club} voting is open',
@@ -122,21 +178,27 @@ class _ClientHomeState extends State<ClientHome> {
 
                   // 2. The next season (always shown when there is one, even during a vote)
                   if (next != null) ...[
-                    const SizedBox(height: 20),
-                    const _SectionLabel('Coming up'),
+                    SizedBox(height: active != null ? 24 : 16),
+                    _SectionHeader(
+                      title: '${next.club} election',
+                      subtitle: 'School year ${next.schoolYear}',
+                      chipLabel: 'Upcoming',
+                      chipBg: const Color(0xFFE3ECF8),
+                      chipFg: C.blue,
+                    ),
+                    const SizedBox(height: 12),
                     DoomsdayTimer(
                       key: ValueKey(
                           'next-${next.id}-${next.startDate.millisecondsSinceEpoch}'),
-                      label: 'Next voting season starts in',
+                      label: 'Voting opens in',
                       finishedLabel: 'Voting is about to open',
                       end: next.startDate,
-                      subtitle: '${next.club}, ${next.schoolYear}\n'
-                          'Open to ${next.audience}',
+                      subtitle: 'Open to ${next.audience}',
                       onFinished: state.refreshSoon,
                     ),
                   ],
 
-                  // 3. Candidates, only while a season is in progress or pending
+                  // 3. Candidates (hidden when no season is pending or in progress)
                   if (showCandidates) ...[
                     const SizedBox(height: 32),
                     const Text('Meet the candidates',
@@ -145,49 +207,9 @@ class _ClientHomeState extends State<ClientHome> {
                     const SizedBox(height: 4),
                     const Text('Tap a card to read their vision.',
                         style: TextStyle(color: C.muted)),
-                    const SizedBox(height: 12),
-                    for (final p in positions) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(top: 14, bottom: 10),
-                        child: Row(
-                          children: [
-                            Text(p.title,
-                                style: const TextStyle(
-                                    fontSize: 17, fontWeight: FontWeight.w800)),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                  color: const Color(0xFFE3ECF8),
-                                  borderRadius: BorderRadius.circular(20)),
-                              child: Text('${state.candidatesFor(p.id).length}',
-                                  style: const TextStyle(
-                                      color: C.blue,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700)),
-                            ),
-                          ],
-                        ),
-                      ),
-                      GridView(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate:
-                            const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 230,
-                          mainAxisExtent: 300,
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-                        ),
-                        children: [
-                          for (final c in state.candidatesFor(p.id))
-                            CandidateCard(
-                                candidate: c,
-                                onTap: () => showCandidateSheet(context, c)),
-                        ],
-                      ),
-                    ],
+                    const SizedBox(height: 16),
+                    for (final p in state.positions)
+                      _PositionSection(position: p),
                   ],
                 ],
               ),
@@ -199,10 +221,10 @@ class _ClientHomeState extends State<ClientHome> {
   }
 }
 
-/// Who is signed in: initials, name, student number and grade level.
-class _ProfileCard extends StatelessWidget {
-  final Student me;
-  const _ProfileCard(this.me);
+/// Who is signed in: avatar, grade level, student number.
+class _ProfileStrip extends StatelessWidget {
+  final Student student;
+  const _ProfileStrip({required this.student});
 
   @override
   Widget build(BuildContext context) {
@@ -212,26 +234,20 @@ class _ProfileCard extends StatelessWidget {
       child: Row(
         children: [
           CircleAvatar(
-            radius: 24,
-            backgroundColor: C.blue,
-            child: Text(me.initials,
+            radius: 22,
+            backgroundColor: C.navy,
+            child: Text(student.initials,
                 style: const TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.w800)),
+                    color: C.yellow, fontWeight: FontWeight.w800)),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(me.fullName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 2),
-                Text('${me.studentNum}, ${state.gradeName(me.gradeLevelId)}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                Text(state.gradeName(student.gradeLevelId),
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                Text('Student number ${student.studentNum}',
                     style: const TextStyle(color: C.muted, fontSize: 13)),
               ],
             ),
@@ -242,101 +258,103 @@ class _ProfileCard extends StatelessWidget {
   }
 }
 
-class _SectionLabel extends StatelessWidget {
-  final String text;
-  const _SectionLabel(this.text);
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Text(text.toUpperCase(),
-            style: const TextStyle(
-                color: C.muted,
-                fontSize: 12,
-                letterSpacing: 1,
-                fontWeight: FontWeight.w700)),
-      );
-}
-
-/// The season that is open for this student: countdown to closing, then vote or tally.
-class _OpenSeasonCard extends StatelessWidget {
-  final ClientElection election;
-  final bool hasVoted;
-  const _OpenSeasonCard({required this.election, required this.hasVoted});
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String chipLabel;
+  final Color chipBg;
+  final Color chipFg;
+  const _SectionHeader({
+    required this.title,
+    required this.subtitle,
+    required this.chipLabel,
+    required this.chipBg,
+    required this.chipFg,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Row(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('${election.club} election',
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w800)),
-                  Text('School year ${election.schoolYear}',
-                      style: const TextStyle(color: C.muted)),
-                ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w800)),
+              Text(subtitle, style: const TextStyle(color: C.muted)),
+            ],
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+              color: chipBg, borderRadius: BorderRadius.circular(20)),
+          child: Text(chipLabel,
+              style: TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w700, color: chipFg)),
+        ),
+      ],
+    );
+  }
+}
+
+/// One position and its candidate cards.
+class _PositionSection extends StatelessWidget {
+  final Position position;
+  const _PositionSection({required this.position});
+
+  @override
+  Widget build(BuildContext context) {
+    final list = state.candidatesFor(position.id);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 8, bottom: 10),
+          child: Row(
+            children: [
+              Text(position.title,
+                  style: const TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.w700)),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                    color: const Color(0xFFE3ECF8),
+                    borderRadius: BorderRadius.circular(20)),
+                child: Text('${list.length}',
+                    style: const TextStyle(
+                        color: C.blue,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700)),
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                  color: const Color(0xFFE7F5EE),
-                  borderRadius: BorderRadius.circular(20)),
-              child: const Text('Voting open',
-                  style: TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w700, color: C.ok)),
-            ),
-          ],
+            ],
+          ),
         ),
-        const SizedBox(height: 12),
-        DoomsdayTimer(
-          key: ValueKey(
-              'close-${election.id}-${election.endDate.millisecondsSinceEpoch}'),
-          end: election.endDate,
-          onFinished: state.refreshSoon,
-        ),
-        const SizedBox(height: 14),
-        if (hasVoted)
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: cardBox(
-                color: const Color(0xFFE7F5EE),
-                border: const Color(0xFFB9E2CD)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Row(children: [
-                  Icon(Icons.check_circle, color: C.ok),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text('Your ballot is in. Thanks for voting.',
-                        style: TextStyle(fontWeight: FontWeight.w700)),
-                  ),
-                ]),
-                const SizedBox(height: 12),
-                BlueButton(
-                  label: 'See live tally',
-                  icon: Icons.bar_chart,
-                  outlined: true,
-                  onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const ResultScreen())),
-                ),
-              ],
-            ),
+        if (list.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Text('No candidates yet.', style: TextStyle(color: C.muted)),
           )
         else
-          BlueButton(
-            label: 'Cast your vote',
-            icon: Icons.how_to_vote,
-            onPressed: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const VoteScreen())),
+          GridView(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 230,
+              mainAxisExtent: 300,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+            ),
+            children: [
+              for (final c in list)
+                CandidateCard(
+                    candidate: c, onTap: () => showCandidateSheet(context, c)),
+            ],
           ),
+        const SizedBox(height: 10),
       ],
     );
   }
@@ -370,7 +388,8 @@ class _Notice extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.w800)),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800, fontSize: 16)),
                 const SizedBox(height: 2),
                 Text(body, style: const TextStyle(color: C.muted)),
               ],
