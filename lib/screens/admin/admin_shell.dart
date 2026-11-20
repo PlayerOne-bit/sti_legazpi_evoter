@@ -3,6 +3,7 @@ import '../../data/mock.dart';
 import '../../widgets/centered_body.dart';
 import '../../widgets/loading_view.dart';
 import '../auth.dart';
+import 'admin_manager.dart';
 import 'candidate_manager.dart';
 import 'dashboard.dart';
 import 'history_manager.dart';
@@ -23,7 +24,8 @@ class _AdminShellState extends State<AdminShell> {
     'Seasons',
     'Students',
     'Candidates',
-    'History'
+    'History',
+    'Admins'
   ];
   static const pages = [
     DashboardPage(),
@@ -31,6 +33,7 @@ class _AdminShellState extends State<AdminShell> {
     StudentManagerPage(),
     CandidateManagerPage(),
     HistoryManagerPage(),
+    AdminManagerPage(),
   ];
 
   @override
@@ -51,7 +54,6 @@ class _AdminShellState extends State<AdminShell> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, c) {
-        // PC: side rail. Phones and short landscape screens: bottom bar.
         final wide = c.maxWidth >= 800 && c.maxHeight >= 480;
         final body = CenteredBody(
           maxWidth: 900,
@@ -110,6 +112,10 @@ class _AdminShellState extends State<AdminShell> {
                             label: Text('Candidates')),
                         NavigationRailDestination(
                             icon: Icon(Icons.history), label: Text('History')),
+                        NavigationRailDestination(
+                            icon: Icon(Icons.admin_panel_settings_outlined),
+                            selectedIcon: Icon(Icons.admin_panel_settings),
+                            label: Text('Admins')),
                       ],
                     ),
                     const VerticalDivider(width: 1),
@@ -141,6 +147,10 @@ class _AdminShellState extends State<AdminShell> {
                         label: 'Candidates'),
                     NavigationDestination(
                         icon: Icon(Icons.history), label: 'History'),
+                    NavigationDestination(
+                        icon: Icon(Icons.admin_panel_settings_outlined),
+                        selectedIcon: Icon(Icons.admin_panel_settings),
+                        label: 'Admins'),
                   ],
                 ),
         );

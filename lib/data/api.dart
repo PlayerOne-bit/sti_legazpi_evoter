@@ -3,30 +3,34 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class ApiException implements Exception {
-  final int status; // 0 = could not reach the server
+  final int status;
   final String message;
   ApiException(this.status, this.message);
   @override
   String toString() => message;
 }
 
+class TwoFactorRequired implements Exception {
+  final String challenge;
+  final String emailHint;
+  TwoFactorRequired(this.challenge, this.emailHint);
+}
+
 class Api {
-  // Only used when testing on a real phone over Wi-Fi.
   static const _lanHost = 'YOUR-PC-IP';
   static const _useLan = false;
 
   static String get baseUrl {
     if (_useLan) return 'http://$_lanHost:5080';
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:5080'; // Android emulator
+      return 'http://10.0.2.2:5080';
     }
-    return 'http://localhost:5080'; // Chrome, Windows
+    return 'http://localhost:5080';
   }
 
   static String? token;
   static String? role;
 
-  /// serverTime minus phone time. Add it to DateTime.now() for a correct clock.
   static Duration clockOffset = Duration.zero;
   static DateTime get now => DateTime.now().add(clockOffset);
 
@@ -89,6 +93,12 @@ class Api {
     syncFrom(j['serverTime'] as String);
   }
 
+  static String _finishLogin(dynamic j) {
+    token = j['token'] as String;
+    role = j['role'] as String;
+    return j['displayName'] as String;
+  }
+
   static Future<String> login(
       {required bool admin, required String user, required String pass}) async {
     final j = await post(
@@ -97,9 +107,19 @@ class Api {
           ? {'username': user.trim(), 'password': pass}
           : {'studentNum': user.trim(), 'password': pass},
     );
-    token = j['token'] as String;
-    role = j['role'] as String;
-    return j['displayName'] as String;
+    if (j['twoFactorRequired'] == true) {
+      throw TwoFactorRequired(
+          j['challenge'] as String, (j['emailHint'] ?? '') as String);
+    }
+    return _finishLogin(j);
+  }
+
+  static Future<String> verifyAdmin(String challenge, String code) async =>
+      _finishLogin(await post('/api/auth/admin/verify',
+          {'challenge': challenge, 'code': code.trim()}));
+
+  static Future<void> resendAdminCode(String challenge) async {
+    await post('/api/auth/admin/resend', {'challenge': challenge});
   }
 
   static void logout() {

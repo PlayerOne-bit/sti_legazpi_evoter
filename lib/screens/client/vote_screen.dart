@@ -25,7 +25,6 @@ class _VoteScreenState extends State<VoteScreen> {
 
   bool _chosen(int i) => state.selections.containsKey(_ps[i].id);
 
-  /// A step is reachable only when every earlier position has a choice.
   bool _canGoTo(int i) {
     for (int j = 0; j < i && j < _ps.length; j++) {
       if (!_chosen(j)) return false;
@@ -58,7 +57,6 @@ class _VoteScreenState extends State<VoteScreen> {
       Navigator.of(context).pop();
   }
 
-  // PC: left and right arrow keys move between positions
   KeyEventResult _onKey(FocusNode node, KeyEvent e) {
     if (e is! KeyDownEvent) return KeyEventResult.ignored;
     final lastIndex = _ps.length;
@@ -180,8 +178,6 @@ class _PositionPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Header scrolls with the grid so short landscape screens still have room.
-    // Columns adapt: 2 on phones, 3 to 4 on tablets, landscape and PC.
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(
