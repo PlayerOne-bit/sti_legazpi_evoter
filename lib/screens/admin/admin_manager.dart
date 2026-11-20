@@ -14,6 +14,8 @@ class _Field {
       {this.secret = false, this.initial = '', this.keyboard});
 }
 
+/// A small form dialog. [onSubmit] returns an error message, or null when it worked.
+/// Returns true when the form was submitted successfully.
 Future<bool> _formDialog(
   BuildContext context, {
   required String title,
@@ -107,6 +109,8 @@ Future<String?> _try(Future<void> Function() call) async {
   }
 }
 
+/// Your account (password, and for the super admin the username and two-step
+/// verification) and, for the super admin, the list of administrators.
 class AdminManagerPage extends StatefulWidget {
   const AdminManagerPage({super.key});
 
@@ -133,6 +137,7 @@ class _AdminManagerPageState extends State<AdminManagerPage> {
     });
     try {
       final account = await AdminApi.account();
+      Api.displayName = account.username;
       final list = account.isSuper ? await AdminApi.list() : <AdminInfo>[];
       if (!mounted) return;
       setState(() {
@@ -153,6 +158,8 @@ class _AdminManagerPageState extends State<AdminManagerPage> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
+
+  // ---------------- my account ----------------
 
   Future<void> _editAccount() async {
     final account = me!;
@@ -241,6 +248,8 @@ class _AdminManagerPageState extends State<AdminManagerPage> {
     }
   }
 
+  // ---------------- administrators ----------------
+
   Future<void> _addAdmin() async {
     final ok = await _formDialog(
       context,
@@ -300,6 +309,8 @@ class _AdminManagerPageState extends State<AdminManagerPage> {
     _toast(err ?? '${a.username} was removed.');
     if (err == null) _load();
   }
+
+  // ---------------- build ----------------
 
   Widget _chip(String text, Color bg, Color fg) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

@@ -45,6 +45,13 @@ class DashboardPage extends StatelessWidget {
         return ListView(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
           children: [
+            Text('Welcome ${Api.displayName ?? 'admin'}!',
+                style:
+                    const TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 2),
+            const Text('Here is how the voting seasons are doing.',
+                style: TextStyle(color: C.muted)),
+            const SizedBox(height: 18),
             Row(
               children: [
                 Expanded(

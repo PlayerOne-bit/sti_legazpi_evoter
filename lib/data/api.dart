@@ -31,6 +31,8 @@ class Api {
   static String? token;
   static String? role;
 
+  static String? displayName;
+
   static Duration clockOffset = Duration.zero;
   static DateTime get now => DateTime.now().add(clockOffset);
 
@@ -96,7 +98,8 @@ class Api {
   static String _finishLogin(dynamic j) {
     token = j['token'] as String;
     role = j['role'] as String;
-    return j['displayName'] as String;
+    displayName = j['displayName'] as String;
+    return displayName!;
   }
 
   static Future<String> login(
@@ -125,6 +128,7 @@ class Api {
   static void logout() {
     token = null;
     role = null;
+    displayName = null;
   }
 }
 
