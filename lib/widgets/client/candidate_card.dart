@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/mock.dart';
 import '../../theme.dart';
+import '../candidate_avatar.dart';
 
 /// Grid tile: portrait, name, party list, motto.
 /// [selectable] shows the check badge when [selected]. [onInfo] shows an info button.
@@ -34,7 +35,11 @@ class CandidateCard extends StatelessWidget {
     final url = c.imageUrl;
     if (url == null) return _initials(c);
     return Image.network(url,
-        fit: BoxFit.cover, errorBuilder: (_, __, ___) => _initials(c));
+        key: ValueKey(url),
+        fit: BoxFit.cover,
+        alignment: Alignment.topCenter,
+        loadingBuilder: (_, child, p) => p == null ? child : _initials(c),
+        errorBuilder: (_, __, ___) => _initials(c));
   }
 
   @override
@@ -111,7 +116,7 @@ class CandidateCard extends StatelessWidget {
                       style: const TextStyle(color: C.muted, fontSize: 12)),
                   if (c.motto.isNotEmpty) ...[
                     const SizedBox(height: 6),
-                    Text('\u201C${c.motto}\u201D',
+                    Text('“${c.motto}”',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -143,15 +148,7 @@ void showCandidateSheet(BuildContext context, Candidate c) {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundColor: c.color,
-                child: Text(c.initials,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800)),
-              ),
+              CandidateAvatar(candidate: c, radius: 36),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -168,7 +165,7 @@ void showCandidateSheet(BuildContext context, Candidate c) {
           ),
           if (c.motto.isNotEmpty) ...[
             const SizedBox(height: 16),
-            Text('\u201C${c.motto}\u201D',
+            Text('“${c.motto}”',
                 style:
                     const TextStyle(fontSize: 16, fontStyle: FontStyle.italic)),
           ],
