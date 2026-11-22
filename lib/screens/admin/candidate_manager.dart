@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../data/api.dart';
 import '../../data/candidate_images.dart';
 import '../../data/mock.dart';
 import '../../widgets/blue_button.dart';
@@ -26,7 +28,7 @@ class _CandidateManagerPageState extends State<CandidateManagerPage> {
 
   Future<void> _photo(Candidate c, int electionId) async {
     setState(() => _busyId = c.id);
-    final err = await CandidateImages.pickAndUpload(c.id);
+    final err = await CandidateImages.pickAndUpload(context, c.id);
     if (err == null) await state.loadAdminCandidates(electionId);
     if (!mounted) return;
     setState(() => _busyId = null);
@@ -43,119 +45,262 @@ class _CandidateManagerPageState extends State<CandidateManagerPage> {
   }
 
   Future<void> _add(BuildContext context, int electionId) async {
-    final numCtl = TextEditingController();
+    final search = TextEditingController();
     final party = TextEditingController();
     final motto = TextEditingController();
     int? pos =
         state.adminPositions.isEmpty ? null : state.adminPositions.first.id;
+    final taken = {for (final c in state.adminCandidates) c.studentNum};
+
+    Student? picked;
+    List<Student> results = [];
+    bool searching = false;
     String? error;
     bool saving = false;
+    Timer? debounce;
+    int ticket = 0;
 
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          title: const Text('Add candidate'),
-          content: SizedBox(
-            width: 420,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: numCtl,
-                    enabled: !saving,
-                    decoration: const InputDecoration(
-                      labelText: 'Student number',
-                      helperText:
-                          'The student must already be in the Students list.',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<int>(
-                    initialValue: pos,
-                    decoration: const InputDecoration(labelText: 'Position'),
-                    items: [
-                      for (final p in state.adminPositions)
-                        DropdownMenuItem(value: p.id, child: Text(p.title)),
+        builder: (ctx, setS) {
+          void onSearch(String text) {
+            debounce?.cancel();
+            if (text.trim().isEmpty) {
+              setS(() {
+                results = [];
+                searching = false;
+              });
+              return;
+            }
+            setS(() => searching = true);
+            debounce = Timer(const Duration(milliseconds: 300), () async {
+              final mine = ++ticket;
+              try {
+                final r = await state.searchStudents(text, limit: 6);
+                if (mine != ticket || !ctx.mounted) return;
+                setS(() {
+                  results = r;
+                  searching = false;
+                });
+              } on ApiException catch (e) {
+                if (mine != ticket || !ctx.mounted) return;
+                setS(() {
+                  results = [];
+                  searching = false;
+                  error = e.message;
+                });
+              }
+            });
+          }
+
+          return AlertDialog(
+            title: const Text('Add candidate'),
+            content: SizedBox(
+              width: 420,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (picked != null)
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: cardBox(),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: colorFor(picked!.id),
+                              child: Text(picked!.initials,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800)),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(picked!.fullName,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w700)),
+                                  Text(
+                                      '${picked!.studentNum}, ${state.gradeName(picked!.gradeLevelId)}',
+                                      style: const TextStyle(
+                                          color: C.muted, fontSize: 13)),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: 'Choose another student',
+                              icon: const Icon(Icons.close),
+                              onPressed: saving
+                                  ? null
+                                  : () => setS(() {
+                                        picked = null;
+                                        search.clear();
+                                        results = [];
+                                      }),
+                            ),
+                          ],
+                        ),
+                      )
+                    else ...[
+                      TextField(
+                        controller: search,
+                        enabled: !saving,
+                        autofocus: true,
+                        onChanged: onSearch,
+                        decoration: InputDecoration(
+                          labelText: 'Search student',
+                          helperText: 'Type a name or student number.',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: searching
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2)),
+                                )
+                              : null,
+                        ),
+                      ),
+                      if (results.isNotEmpty)
+                        Container(
+                          margin: const EdgeInsets.only(top: 6),
+                          constraints: const BoxConstraints(maxHeight: 220),
+                          decoration: cardBox(),
+                          child: ListView(
+                            shrinkWrap: true,
+                            children: [
+                              for (final s in results)
+                                ListTile(
+                                  dense: true,
+                                  enabled: !taken.contains(s.studentNum),
+                                  leading: CircleAvatar(
+                                    radius: 16,
+                                    backgroundColor: colorFor(s.id),
+                                    child: Text(s.initials,
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w800)),
+                                  ),
+                                  title: Text(s.fullName),
+                                  subtitle: Text(
+                                      '${s.studentNum}, ${taken.contains(s.studentNum) ? 'Already a candidate' : state.gradeName(s.gradeLevelId)}'),
+                                  onTap: () => setS(() {
+                                    picked = s;
+                                    error = null;
+                                  }),
+                                ),
+                            ],
+                          ),
+                        )
+                      else if (!searching && search.text.trim().isNotEmpty)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Text('No matching students.',
+                              style: TextStyle(color: C.muted)),
+                        ),
                     ],
-                    onChanged: saving ? null : (v) => setS(() => pos = v),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: party,
-                    enabled: !saving,
-                    decoration: const InputDecoration(labelText: 'Party list'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: motto,
-                    enabled: !saving,
-                    maxLines: 2,
-                    decoration: const InputDecoration(labelText: 'Motto'),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                      'After saving, tap the candidate\'s photo circle to add a photo.',
-                      style: TextStyle(color: C.muted, fontSize: 12)),
-                  if (error != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: Text(error!,
-                          style: TextStyle(color: Colors.red.shade700)),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<int>(
+                      initialValue: pos,
+                      decoration: const InputDecoration(labelText: 'Position'),
+                      items: [
+                        for (final p in state.adminPositions)
+                          DropdownMenuItem(value: p.id, child: Text(p.title)),
+                      ],
+                      onChanged: saving ? null : (v) => setS(() => pos = v),
                     ),
-                ],
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: party,
+                      enabled: !saving,
+                      decoration:
+                          const InputDecoration(labelText: 'Party list'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: motto,
+                      enabled: !saving,
+                      maxLines: 2,
+                      decoration: const InputDecoration(labelText: 'Motto'),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                        'After saving, tap the candidate\'s photo circle to add a photo.',
+                        style: TextStyle(color: C.muted, fontSize: 12)),
+                    if (error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Text(error!,
+                            style: TextStyle(color: Colors.red.shade700)),
+                      ),
+                  ],
+                ),
               ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: saving ? null : () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: saving
-                  ? null
-                  : () async {
-                      if (pos == null) {
-                        setS(() => error = 'This season has no positions.');
-                        return;
-                      }
-                      setS(() {
-                        saving = true;
-                        error = null;
-                      });
-                      final err = await state.addCandidate(
-                        electionId: electionId,
-                        studentNum: numCtl.text,
-                        positionId: pos!,
-                        partyList: party.text,
-                        motto: motto.text,
-                      );
-                      if (!ctx.mounted) return;
-                      if (err != null) {
+            actions: [
+              TextButton(
+                onPressed: saving ? null : () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: saving
+                    ? null
+                    : () async {
+                        if (picked == null) {
+                          setS(() => error = 'Search and choose a student.');
+                          return;
+                        }
+                        if (pos == null) {
+                          setS(() => error = 'This season has no positions.');
+                          return;
+                        }
                         setS(() {
-                          saving = false;
-                          error = err;
+                          saving = true;
+                          error = null;
                         });
-                        return;
-                      }
-                      Navigator.pop(ctx);
-                    },
-              child: saving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Save candidate'),
-            ),
-          ],
-        ),
+                        final err = await state.addCandidateFor(
+                          electionId: electionId,
+                          studentId: picked!.id,
+                          positionId: pos!,
+                          partyList: party.text,
+                          motto: motto.text,
+                        );
+                        if (err == null) {
+                          await state.loadAdminCandidates(electionId);
+                        }
+                        if (!ctx.mounted) return;
+                        if (err != null) {
+                          setS(() {
+                            saving = false;
+                            error = err;
+                          });
+                          return;
+                        }
+                        Navigator.pop(ctx);
+                      },
+                child: saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Save candidate'),
+              ),
+            ],
+          );
+        },
       ),
     );
 
-    numCtl.dispose();
+    debounce?.cancel();
+    search.dispose();
     party.dispose();
     motto.dispose();
   }
