@@ -15,6 +15,7 @@ class StudentCard extends StatelessWidget {
     final details = [
       student.studentNum,
       state.gradeName(student.gradeLevelId),
+      if (student.section.isNotEmpty) 'Sec. ${student.section}',
       if (student.programCode != null) student.programCode!,
     ].join('  ·  ');
     return AnimatedOpacity(

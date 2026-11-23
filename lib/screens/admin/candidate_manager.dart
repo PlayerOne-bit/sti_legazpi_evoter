@@ -7,6 +7,7 @@ import '../../data/candidate_images.dart';
 import '../../data/mock.dart';
 import '../../widgets/centered_body.dart';
 import '../../widgets/candidate_avatar.dart';
+import '../../widgets/admin/party_widgets.dart';
 import '../../theme.dart';
 
 class SeasonCandidatesScreen extends StatefulWidget {
@@ -64,6 +65,151 @@ class _SeasonCandidatesScreenState extends State<SeasonCandidatesScreen> {
     if (!mounted) return;
     setState(() => _busyId = null);
     if (err != null) _snack(err);
+  }
+
+  Candidate? _partyHolder(int positionId, String party, {int? ignoreId}) {
+    if (isIndependent(party)) return null;
+    final key = party.trim().toLowerCase();
+    for (final c in state.adminCandidates) {
+      if (c.id != ignoreId &&
+          c.positionId == positionId &&
+          !isIndependent(c.partyList) &&
+          c.partyList.trim().toLowerCase() == key) return c;
+    }
+    return null;
+  }
+
+  String _rankTitle(Position p) => '${p.displayOrder} - ${p.title}';
+
+  Future<void> _positionDialog(int electionId, {Position? existing}) async {
+    final titleCtl = TextEditingController(text: existing?.title ?? '');
+    final count = state.adminPositions.length;
+    final maxRank = existing == null ? count + 1 : count;
+    int rank = existing?.displayOrder ?? maxRank;
+    String? error;
+    bool saving = false;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: Text(existing == null ? 'Add position' : 'Edit position'),
+          content: SizedBox(
+            width: 380,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 96,
+                      child: DropdownButtonFormField<int>(
+                        initialValue: rank,
+                        decoration: const InputDecoration(labelText: 'Rank'),
+                        items: [
+                          for (var i = 1; i <= maxRank; i++)
+                            DropdownMenuItem(value: i, child: Text('$i')),
+                        ],
+                        onChanged: saving ? null : (v) => setS(() => rank = v!),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: titleCtl,
+                        autofocus: true,
+                        enabled: !saving,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: const InputDecoration(
+                            labelText: 'Position title',
+                            hintText: 'For example President'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                    'Rank 1 is shown first on the ballot. Other positions move down to make room.',
+                    style: TextStyle(color: C.muted, fontSize: 12)),
+                if (error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Text(error!, style: TextStyle(color: C.danger)),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: saving ? null : () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      if (titleCtl.text.trim().isEmpty) {
+                        setS(() => error = 'Enter a position title.');
+                        return;
+                      }
+                      setS(() {
+                        saving = true;
+                        error = null;
+                      });
+                      final err = existing == null
+                          ? await state.addPosition(
+                              electionId, titleCtl.text, rank)
+                          : await state.updatePosition(
+                              electionId, existing.id, titleCtl.text, rank);
+                      if (!ctx.mounted) return;
+                      if (err != null) {
+                        setS(() {
+                          saving = false;
+                          error = err;
+                        });
+                        return;
+                      }
+                      Navigator.pop(ctx);
+                    },
+              child: Text(saving
+                  ? 'Saving...'
+                  : existing == null
+                      ? 'Add position'
+                      : 'Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+    titleCtl.dispose();
+  }
+
+  Future<void> _deletePosition(int electionId, Position p) async {
+    final n = _candidatesFor(p.id).length;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete ${_rankTitle(p)}?'),
+        content: Text(n == 0
+            ? 'The positions below it move up one rank.'
+            : 'Its $n candidate${n == 1 ? '' : 's'} will be removed too. '
+                'The positions below it move up one rank.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: C.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete position'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final err = await state.deletePosition(electionId, p.id);
+    _snack(err ?? '${p.title} was deleted.');
   }
 
   Future<void> _add(BuildContext context, int electionId,
@@ -231,22 +377,120 @@ class _SeasonCandidatesScreenState extends State<SeasonCandidatesScreen> {
                         ),
                     ],
                     const SizedBox(height: 12),
+                    Autocomplete<PartyList>(
+                      initialValue: TextEditingValue(text: party.text),
+                      displayStringForOption: (o) => o.name,
+                      optionsBuilder: (v) {
+                        final q = v.text.trim().toLowerCase();
+                        return [
+                          PartyList(0, independent, null),
+                          ...state.partyLists,
+                        ].where((o) =>
+                            q.isEmpty || o.name.toLowerCase().contains(q));
+                      },
+                      onSelected: (o) => setS(() {
+                        party.text = o.name;
+                        error = null;
+                      }),
+                      fieldViewBuilder: (context, ctl, focus, onSubmit) =>
+                          TextField(
+                        controller: ctl,
+                        focusNode: focus,
+                        enabled: !saving,
+                        onChanged: (v) => setS(() {
+                          party.text = v;
+                          error = null;
+                        }),
+                        decoration: InputDecoration(
+                          labelText: 'Party list',
+                          hintText: 'Search or type a new one',
+                          helperText:
+                              'Leave empty or pick Independent for no party list.',
+                          prefixIcon: const Icon(Icons.flag_outlined),
+                        ),
+                      ),
+                      optionsViewBuilder: (context, onPick, options) => Align(
+                        alignment: Alignment.topLeft,
+                        child: Material(
+                          elevation: 6,
+                          color: C.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(
+                                maxHeight: 260, maxWidth: 380),
+                            child: ListView(
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              shrinkWrap: true,
+                              children: [
+                                for (final o in options)
+                                  ListTile(
+                                    dense: true,
+                                    leading: o.id == 0
+                                        ? CircleAvatar(
+                                            radius: 14,
+                                            backgroundColor: C.surface2,
+                                            child: Icon(Icons.person_outline,
+                                                size: 16, color: C.muted))
+                                        : PartyLogo.of(o, radius: 14),
+                                    title: Text(o.name),
+                                    subtitle: pos != null &&
+                                            _partyHolder(pos!, o.name) != null
+                                        ? Text(
+                                            'Has a candidate for this position',
+                                            style: TextStyle(
+                                                color: C.warnFg, fontSize: 11))
+                                        : null,
+                                    onTap: () => onPick(o),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     DropdownButtonFormField<int>(
                       initialValue: pos,
                       decoration: const InputDecoration(labelText: 'Position'),
                       items: [
                         for (final p in state.adminPositions)
-                          DropdownMenuItem(value: p.id, child: Text(p.title)),
+                          DropdownMenuItem(
+                            value: p.id,
+                            child: Text(
+                              _partyHolder(p.id, party.text) == null
+                                  ? _rankTitle(p)
+                                  : '${_rankTitle(p)}  (${party.text.trim()} has one)',
+                              style: TextStyle(
+                                  color: _partyHolder(p.id, party.text) == null
+                                      ? null
+                                      : C.muted),
+                            ),
+                          ),
                       ],
-                      onChanged: saving ? null : (v) => setS(() => pos = v),
+                      onChanged: saving
+                          ? null
+                          : (v) => setS(() {
+                                pos = v;
+                                error = null;
+                              }),
                     ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: party,
-                      enabled: !saving,
-                      decoration:
-                          const InputDecoration(labelText: 'Party list'),
-                    ),
+                    if (pos != null && _partyHolder(pos!, party.text) != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline, size: 16, color: C.warnFg),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                  '${party.text.trim()} already has ${_partyHolder(pos!, party.text)!.name} for this position. '
+                                  'A party list can have only one candidate per position.',
+                                  style: TextStyle(
+                                      color: C.warnFg, fontSize: 12.5)),
+                            ),
+                          ],
+                        ),
+                      ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: motto,
@@ -284,6 +528,12 @@ class _SeasonCandidatesScreenState extends State<SeasonCandidatesScreen> {
                           setS(() => error = 'This season has no positions.');
                           return;
                         }
+                        final holder = _partyHolder(pos!, party.text);
+                        if (holder != null) {
+                          setS(() => error =
+                              '${party.text.trim()} already has ${holder.name} for this position.');
+                          return;
+                        }
                         setS(() {
                           saving = true;
                           error = null;
@@ -292,7 +542,9 @@ class _SeasonCandidatesScreenState extends State<SeasonCandidatesScreen> {
                           electionId: electionId,
                           studentId: picked!.id,
                           positionId: pos!,
-                          partyList: party.text,
+                          partyList: isIndependent(party.text)
+                              ? ''
+                              : party.text.trim(),
                           motto: motto.text,
                         );
                         if (err == null) {
@@ -455,6 +707,17 @@ class _SeasonCandidatesScreenState extends State<SeasonCandidatesScreen> {
         children: [
           Row(
             children: [
+              Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                    color: C.blue, borderRadius: BorderRadius.circular(9)),
+                child: Text('${p.displayOrder}',
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w800)),
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(p.title,
                     style: const TextStyle(
@@ -474,13 +737,35 @@ class _SeasonCandidatesScreenState extends State<SeasonCandidatesScreen> {
                         fontWeight: FontWeight.w800,
                         color: list.isEmpty ? C.warnFg : C.blue)),
               ),
-              if (editable)
+              if (editable) ...[
                 IconButton(
                   tooltip: 'Add a ${p.title} candidate',
                   icon: Icon(Icons.person_add_alt_1, color: C.blue),
                   onPressed: () => _add(context, e.id, positionId: p.id),
-                )
-              else
+                ),
+                PopupMenuButton<String>(
+                  tooltip: 'Position options',
+                  onSelected: (v) => v == 'edit'
+                      ? _positionDialog(e.id, existing: p)
+                      : _deletePosition(e.id, p),
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(
+                        value: 'edit',
+                        child: ListTile(
+                            dense: true,
+                            leading: Icon(Icons.edit_outlined),
+                            title: Text('Rename or change rank'))),
+                    PopupMenuItem(
+                        value: 'delete',
+                        child: ListTile(
+                            dense: true,
+                            leading:
+                                Icon(Icons.delete_outline, color: C.danger),
+                            title: Text('Delete position',
+                                style: TextStyle(color: C.danger)))),
+                  ],
+                ),
+              ] else
                 const SizedBox(width: 6),
             ],
           ),
@@ -503,7 +788,7 @@ class _SeasonCandidatesScreenState extends State<SeasonCandidatesScreen> {
   Widget _candidateTile(Candidate c, Election e, bool editable) {
     final details = [
       c.studentNum,
-      if (c.partyList.isNotEmpty) c.partyList,
+      partyLabel(c.partyList),
     ].join('  ·  ');
     return Container(
       margin: const EdgeInsets.only(bottom: 8, right: 6),
@@ -626,16 +911,40 @@ class _SeasonCandidatesScreenState extends State<SeasonCandidatesScreen> {
                       child: CircularProgressIndicator(),
                     ),
                   )
-                else if (state.adminPositions.isEmpty)
+                else ...[
                   Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Text('This season has no positions.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: C.muted)),
-                  )
-                else
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      children: [
+                        Text('Positions',
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.w800)),
+                        const SizedBox(width: 8),
+                        Text('ranked as shown on the ballot',
+                            style: TextStyle(color: C.muted, fontSize: 12)),
+                        const Spacer(),
+                        if (editable)
+                          OutlinedButton.icon(
+                            onPressed: () => _positionDialog(e.id),
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text('Add position'),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (state.adminPositions.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Text(
+                          editable
+                              ? 'No positions yet. Add one, for example 1 - President.'
+                              : 'This season has no positions.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: C.muted)),
+                    ),
                   for (final p in state.adminPositions)
                     _positionSection(p, e, editable),
+                ],
               ],
             ),
           ),

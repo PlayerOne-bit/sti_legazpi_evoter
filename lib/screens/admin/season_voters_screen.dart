@@ -197,7 +197,7 @@ class _SeasonVotersScreenState extends State<SeasonVotersScreen> {
       children: [
         TextField(
           decoration: const InputDecoration(
-            hintText: 'Search by name or student number',
+            hintText: 'Search name, number or section',
             prefixIcon: Icon(Icons.search),
           ),
           onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
@@ -226,6 +226,7 @@ class _SeasonVotersScreenState extends State<SeasonVotersScreen> {
     final details = [
       v.studentNum,
       v.gradeLevel,
+      if (v.section.isNotEmpty) 'Sec. ${v.section}',
       if (v.programCode != null) v.programCode!,
     ].join('  ·  ');
     return Container(
@@ -352,13 +353,15 @@ class _SeasonVotersScreenState extends State<SeasonVotersScreen> {
     final d = _data;
     final list = d == null
         ? const <SeasonVoter>[]
-        : d.items.where((v) {
+        : (d.items.where((v) {
             if (_show == _Show.voted && !v.hasVoted) return false;
             if (_show == _Show.notVoted && v.hasVoted) return false;
             if (_q.isEmpty) return true;
             return v.fullName.toLowerCase().contains(_q) ||
-                v.studentNum.toLowerCase().contains(_q);
-          }).toList();
+                v.studentNum.toLowerCase().contains(_q) ||
+                v.section.toLowerCase().contains(_q);
+          }).toList()
+          ..sort((a, b) => byName(a.fullName, b.fullName)));
 
     return Scaffold(
       appBar: BrandAppBar(
@@ -403,6 +406,32 @@ class _SeasonVotersScreenState extends State<SeasonVotersScreen> {
                       padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
                       children: [
                         FadeSlideIn(child: _header(d!)),
+                        const SizedBox(height: 12),
+                        FadeSlideIn(
+                          index: 1,
+                          child: Pressable(
+                            child: FilledButton.icon(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: C.yellow,
+                                foregroundColor: C.onYellow,
+                                minimumSize: const Size.fromHeight(50),
+                              ),
+                              onPressed: _exporting ? null : _export,
+                              icon: _exporting
+                                  ? SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2, color: C.onYellow))
+                                  : const Icon(Icons.download),
+                              label: Text(_exporting
+                                  ? 'Exporting...'
+                                  : d.closed
+                                      ? 'Export voter list (Excel)'
+                                      : 'Export voter list with passwords (Excel)'),
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 16),
                         FadeSlideIn(index: 1, child: _filters(d)),
                         const SizedBox(height: 14),

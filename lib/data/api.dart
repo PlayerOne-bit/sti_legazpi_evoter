@@ -67,6 +67,13 @@ class Api {
     try {
       final j = jsonDecode(res.body);
       message = (j['detail'] ?? j['title'] ?? message).toString();
+      final errors = j['errors'];
+      if (j['detail'] == null && errors is Map && errors.isNotEmpty) {
+        message = [
+          for (final v in errors.values)
+            if (v is List) ...v.map((e) => e.toString()) else v.toString()
+        ].join(' ');
+      }
     } catch (_) {}
     if (res.statusCode == 401 && token != null)
       message = 'Your session expired. Please sign in again.';

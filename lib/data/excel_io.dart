@@ -80,7 +80,7 @@ class ExcelIo {
       save('/api/admin/students/export', 'sti-evoter-students.xlsx');
 
   static Future<String> saveVoters(int electionId, String fileName) =>
-      save('/api/admin/students/export?electionId=$electionId', fileName);
+      save('/api/admin/elections/$electionId/voters/export', fileName);
 
   static Future<String> saveHistory(int historyId) =>
       save('/api/admin/history/$historyId/export', 'sti-evoter-results.xlsx');

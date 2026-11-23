@@ -11,6 +11,7 @@ class ElectionCard extends StatelessWidget {
   final VoidCallback? onClose;
   final VoidCallback? onCandidates;
   final VoidCallback? onVoters;
+  final VoidCallback? onParties;
   const ElectionCard(
       {super.key,
       required this.election,
@@ -18,7 +19,8 @@ class ElectionCard extends StatelessWidget {
       this.onDelete,
       this.onClose,
       this.onCandidates,
-      this.onVoters});
+      this.onVoters,
+      this.onParties});
 
   @override
   Widget build(BuildContext context) {
@@ -108,6 +110,18 @@ class ElectionCard extends StatelessWidget {
                   : '${election.votedCount} of ${election.eligibleCount} voted',
               action: 'Open',
               onTap: onVoters!,
+            ),
+          ],
+          if (onParties != null) ...[
+            const SizedBox(height: 8),
+            _LinkStrip(
+              icon: Icons.flag_outlined,
+              title: 'Party lists',
+              summary: election.candidateCount == 0
+                  ? 'Add candidates to see their party lists'
+                  : 'See who runs under each party list',
+              action: 'Open',
+              onTap: onParties!,
             ),
           ],
           if (onClose != null) ...[

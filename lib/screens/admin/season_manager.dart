@@ -7,6 +7,7 @@ import '../../widgets/admin/election_form.dart';
 import '../../widgets/blue_button.dart';
 import 'candidate_manager.dart';
 import 'season_voters_screen.dart';
+import 'party_lists_screen.dart';
 import 'winner_screen.dart';
 
 class SeasonManagerPage extends StatelessWidget {
@@ -49,6 +50,11 @@ class SeasonManagerPage extends StatelessWidget {
     await state.refreshAdmin();
   }
 
+  void _parties(BuildContext context, Election e) =>
+      Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => PartyListsScreen(
+              electionId: e.id, club: e.club, schoolYear: e.schoolYear)));
+
   void _close(BuildContext context, Election e) => Navigator.of(context)
       .push(MaterialPageRoute(builder: (_) => WinnerScreen(election: e)));
 
@@ -85,6 +91,7 @@ class SeasonManagerPage extends StatelessWidget {
                 election: e,
                 onCandidates: () => _candidates(context, e),
                 onVoters: () => _voters(context, e),
+                onParties: () => _parties(context, e),
                 onClose: () => _close(context, e),
                 onEdit: () => showElectionForm(context, existing: e),
               ),
@@ -94,6 +101,7 @@ class SeasonManagerPage extends StatelessWidget {
                 election: e,
                 onCandidates: () => _candidates(context, e),
                 onVoters: () => _voters(context, e),
+                onParties: () => _parties(context, e),
                 onClose: () => _close(context, e),
               ),
             if (upcoming.isNotEmpty) _heading('Upcoming'),
@@ -102,6 +110,7 @@ class SeasonManagerPage extends StatelessWidget {
                 election: e,
                 onCandidates: () => _candidates(context, e),
                 onVoters: () => _voters(context, e),
+                onParties: () => _parties(context, e),
                 onEdit: () => showElectionForm(context, existing: e),
                 onDelete: () => _delete(context, e),
               ),

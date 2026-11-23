@@ -4,7 +4,16 @@ import '../../data/mock.dart';
 
 Future<void> showStudentForm(BuildContext context) async {
   final numCtl = TextEditingController();
-  final nameCtl = TextEditingController();
+  final lastCtl = TextEditingController();
+  final firstCtl = TextEditingController();
+  final middleCtl = TextEditingController();
+  String fullName() {
+    final last = lastCtl.text.trim();
+    final given = '${firstCtl.text.trim()} ${middleCtl.text.trim()}'.trim();
+    return given.isEmpty ? last : '$last, $given';
+  }
+
+  final sectionCtl = TextEditingController();
   int grade = 6;
   int? programId;
   String year = currentSchoolYear();
@@ -38,8 +47,31 @@ Future<void> showStudentForm(BuildContext context) async {
                 ),
                 const SizedBox(height: 12),
                 TextField(
-                  controller: nameCtl,
-                  decoration: const InputDecoration(labelText: 'Full name'),
+                  controller: lastCtl,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(labelText: 'Last name'),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: firstCtl,
+                        textCapitalization: TextCapitalization.words,
+                        decoration:
+                            const InputDecoration(labelText: 'First name'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: middleCtl,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: const InputDecoration(
+                            labelText: 'Middle name (optional)'),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
@@ -64,6 +96,14 @@ Future<void> showStudentForm(BuildContext context) async {
                     grade = v!;
                     if (!isTertiary(grade)) programId = null;
                   }),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: sectionCtl,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(
+                      labelText: 'Section (optional)',
+                      hintText: 'For example 1Y1 or ST. JOHN'),
                 ),
                 if (isTertiary(grade)) ...[
                   const SizedBox(height: 12),
@@ -126,6 +166,11 @@ Future<void> showStudentForm(BuildContext context) async {
             onPressed: saving
                 ? null
                 : () async {
+                    if (lastCtl.text.trim().isEmpty ||
+                        firstCtl.text.trim().isEmpty) {
+                      setS(() => error = 'Enter the last name and first name.');
+                      return;
+                    }
                     if (isTertiary(grade) && programId == null) {
                       setS(() =>
                           error = 'Pick a program for tertiary students.');
@@ -137,9 +182,10 @@ Future<void> showStudentForm(BuildContext context) async {
                     });
                     final err = await state.addStudent(
                       studentNum: numCtl.text,
-                      fullName: nameCtl.text,
+                      fullName: fullName(),
                       gradeLevelId: grade,
                       schoolYear: year,
+                      section: sectionCtl.text,
                       programId: programId,
                     );
                     if (err != null) {
@@ -161,7 +207,6 @@ Future<void> showStudentForm(BuildContext context) async {
 
   if (added && context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content:
-            Text('${nameCtl.text.trim()} was added as an active student.')));
+        content: Text('${fullName()} was added as an active student.')));
   }
 }

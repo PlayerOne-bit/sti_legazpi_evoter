@@ -37,6 +37,42 @@ String _initials(String name) {
   return (p.first[0] + p.last[0]).toUpperCase();
 }
 
+String personName(String raw) {
+  final text = raw.trim().replaceAll(RegExp(r'\s+'), ' ');
+  final comma = text.indexOf(',');
+  if (comma >= 0) {
+    final last = text.substring(0, comma).trim();
+    final rest = text.substring(comma + 1).replaceAll(',', ' ').trim();
+    return rest.isEmpty ? last : '$last, $rest';
+  }
+  final words = text.split(' ');
+  if (words.length < 2) return text;
+  return '${words.last}, ${words.sublist(0, words.length - 1).join(' ')}';
+}
+
+String personInitials(String raw) {
+  final name = personName(raw);
+  if (name.isEmpty) return '?';
+  final comma = name.indexOf(',');
+  if (comma < 0) return name[0].toUpperCase();
+  final last = name.substring(0, comma).trim();
+  final given = name.substring(comma + 1).trim();
+  final first = given.isEmpty ? '' : given[0];
+  return (first + (last.isEmpty ? '' : last[0])).toUpperCase();
+}
+
+int byName(String a, String b) => a.toLowerCase().compareTo(b.toLowerCase());
+
+const independent = 'Independent';
+
+bool isIndependent(String party) {
+  final t = party.trim().toLowerCase();
+  return t.isEmpty || t == 'independent';
+}
+
+String partyLabel(String? party) =>
+    party == null || isIndependent(party) ? independent : party.trim();
+
 class Student {
   final int id;
   final String studentNum;
@@ -48,14 +84,16 @@ class Student {
   final String? programCode;
   final bool isActive;
   final String schoolYear;
+  final String section;
   const Student(this.id, this.studentNum, this.fullName, this.gradeLevelId,
       {this.hasVoted = false,
       this.canDelete = true,
       this.programId,
       this.programCode,
       this.isActive = true,
-      this.schoolYear = ''});
-  String get initials => _initials(fullName);
+      this.schoolYear = '',
+      this.section = ''});
+  String get initials => personInitials(fullName);
 }
 
 class SeasonVoter {
@@ -65,6 +103,7 @@ class SeasonVoter {
   final int gradeLevelId;
   final String gradeLevel;
   final String? programCode;
+  final String section;
   final bool isActive;
   final String? password;
   final bool hasVoted;
@@ -76,11 +115,12 @@ class SeasonVoter {
       this.gradeLevelId,
       this.gradeLevel,
       this.programCode,
+      this.section,
       this.isActive,
       this.password,
       this.hasVoted,
       this.votedAt);
-  String get initials => _initials(fullName);
+  String get initials => personInitials(fullName);
 }
 
 class SeasonVoters {
@@ -111,7 +151,7 @@ class Candidate {
   const Candidate(
       this.id, this.positionId, this.name, this.partyList, this.color,
       {this.motto = '', this.imageUrl, this.studentNum = ''});
-  String get initials => _initials(name);
+  String get initials => personInitials(name);
 }
 
 class TallyEntry {
@@ -120,7 +160,7 @@ class TallyEntry {
   final String partyList;
   final int votes;
   const TallyEntry(this.candidateId, this.name, this.partyList, this.votes);
-  String get initials => _initials(name);
+  String get initials => personInitials(name);
   Color get color => colorFor(candidateId);
 }
 
@@ -150,7 +190,32 @@ class PartyList {
   final int id;
   final String name;
   final String? logoUrl;
-  const PartyList(this.id, this.name, this.logoUrl);
+  final String? color;
+  const PartyList(this.id, this.name, this.logoUrl, [this.color]);
+  String get initials => _initials(name);
+}
+
+class PartyMember {
+  final int candidateId;
+  final String name;
+  final String studentNum;
+  final String position;
+  final int positionOrder;
+  final String? imageUrl;
+  final String gradeLevel;
+  final String section;
+  const PartyMember(this.candidateId, this.name, this.studentNum, this.position,
+      this.positionOrder, this.imageUrl, this.gradeLevel, this.section);
+  String get initials => personInitials(name);
+}
+
+class PartyGroup {
+  final int? id;
+  final String name;
+  final String? logoUrl;
+  final String? color;
+  final List<PartyMember> members;
+  const PartyGroup(this.id, this.name, this.logoUrl, this.color, this.members);
   String get initials => _initials(name);
 }
 
@@ -227,8 +292,12 @@ ClientElection? _clientElection(dynamic j) => j == null
     : ClientElection(j['id'], j['club'], j['schoolYear'],
         parseUtc(j['startDate']), parseUtc(j['endDate']), j['audience']);
 
-Candidate _candidate(dynamic c, {String studentNum = ''}) => Candidate(c['id'],
-    c['positionId'], c['name'], c['partyList'] ?? '', colorFor(c['id']),
+Candidate _candidate(dynamic c, {String studentNum = ''}) => Candidate(
+    c['id'],
+    c['positionId'],
+    personName(c['name']),
+    partyLabel(c['partyList']),
+    colorFor(c['id']),
     motto: c['motto'] ?? '',
     imageUrl: Api.absUrl(c['imageUrl']),
     studentNum: studentNum);
@@ -237,7 +306,8 @@ List<PositionTally> _parseTally(dynamic j) => [
       for (final p in j)
         PositionTally(p['positionId'], p['position'], p['totalVotes'], [
           for (final c in p['candidates'])
-            TallyEntry(c['candidateId'], c['name'], c['partyList'], c['votes']),
+            TallyEntry(c['candidateId'], personName(c['name']),
+                partyLabel(c['partyList']), c['votes']),
         ]),
     ];
 
@@ -283,7 +353,8 @@ class AppState extends ChangeNotifier {
       final j = await Api.get('/api/client/home');
       Api.syncFrom(j['serverTime']);
       final m = j['me'];
-      me = Student(m['id'], m['studentNum'], m['fullName'], m['gradeLevelId']);
+      me = Student(m['id'], m['studentNum'], personName(m['fullName']),
+          m['gradeLevelId']);
       homeActive = _clientElection(j['active']);
       homeOpenForOthers = _clientElection(j['openForOtherLevels']);
       homeNext = _clientElection(j['next']);
@@ -317,7 +388,7 @@ class AppState extends ChangeNotifier {
       candidates = [
         for (final p in j['positions'])
           for (final c in p['candidates']) _candidate(c),
-      ];
+      ]..sort((a, b) => byName(a.name, b.name));
     } on ApiException {
       positions = [];
       candidates = [];
@@ -441,7 +512,7 @@ class AppState extends ChangeNotifier {
       final r = await Api.get('/api/admin/party-lists');
       partyLists = [
         for (final p in r)
-          PartyList(p['id'], p['name'], Api.absUrl(p['logoUrl']))
+          PartyList(p['id'], p['name'], Api.absUrl(p['logoUrl']), p['color'])
       ];
     } on ApiException {}
     if (notify) notifyListeners();
@@ -451,7 +522,8 @@ class AppState extends ChangeNotifier {
     final j = await Api.post('/api/admin/party-lists', {'name': name.trim()});
     await loadPartyLists();
     return partyLists.firstWhere((p) => p.id == j['id'],
-        orElse: () => PartyList(j['id'], j['name'], Api.absUrl(j['logoUrl'])));
+        orElse: () => PartyList(
+            j['id'], j['name'], Api.absUrl(j['logoUrl']), j['color']));
   }
 
   Future<String?> deletePartyList(int id) async {
@@ -462,6 +534,36 @@ class AppState extends ChangeNotifier {
     } on ApiException catch (e) {
       return e.message;
     }
+  }
+
+  Future<String?> setPartyColor(int id, String? color) async {
+    try {
+      await Api.put('/api/admin/party-lists/$id/color', {'color': color});
+      await loadPartyLists();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    }
+  }
+
+  Future<List<PartyGroup>> fetchPartyGroups(int electionId) async {
+    final r = await Api.get('/api/admin/elections/$electionId/party-lists');
+    return [
+      for (final g in r)
+        PartyGroup(g['id'], g['name'], Api.absUrl(g['logoUrl']), g['color'], [
+          for (final m in g['members'])
+            PartyMember(
+              m['candidateId'],
+              personName(m['name']),
+              m['studentNum'],
+              m['position'],
+              m['positionOrder'],
+              Api.absUrl(m['imageUrl']),
+              m['gradeLevel'],
+              m['section'] ?? '',
+            ),
+        ]),
+    ];
   }
 
   Future<String?> removePartyLogo(int id) async {
@@ -482,19 +584,20 @@ class AppState extends ChangeNotifier {
         final r = await Api.get('/api/admin/students?page=$page&pageSize=200');
         final items = r['items'] as List;
         for (final s in items) {
-          all.add(Student(
-              s['id'], s['studentNum'], s['fullName'], s['gradeLevelId'],
+          all.add(Student(s['id'], s['studentNum'], personName(s['fullName']),
+              s['gradeLevelId'],
               hasVoted: s['hasVoted'],
               canDelete: s['canDelete'],
               programId: s['programId'],
               programCode: s['programCode'],
               isActive: s['isActive'] ?? true,
-              schoolYear: s['schoolYear'] ?? ''));
+              schoolYear: s['schoolYear'] ?? '',
+              section: s['section'] ?? ''));
         }
         if (items.isEmpty || all.length >= (r['total'] as int)) break;
         page++;
       }
-      students = all;
+      students = all..sort((a, b) => byName(a.fullName, b.fullName));
       studentSchoolYears = {
         for (final s in all)
           if (s.schoolYear.isNotEmpty) s.schoolYear
@@ -601,8 +704,8 @@ class AppState extends ChangeNotifier {
       final j = await Api.get('/api/admin/history/${s.id}');
       s.winners = [
         for (final w in j['winners'])
-          SeasonWinner(
-              w['position'], w['name'], w['partyList'], w['voteCount']),
+          SeasonWinner(w['position'], personName(w['name']),
+              partyLabel(w['partyList']), w['voteCount']),
       ];
       return null;
     } on ApiException catch (e) {
@@ -615,6 +718,7 @@ class AppState extends ChangeNotifier {
     required String fullName,
     required int gradeLevelId,
     required String schoolYear,
+    String section = '',
     int? programId,
   }) async {
     try {
@@ -623,6 +727,7 @@ class AppState extends ChangeNotifier {
         'fullName': fullName.trim(),
         'gradeLevelId': gradeLevelId,
         'schoolYear': schoolYear,
+        'section': section.trim(),
         'programId': programId,
       });
       await refreshAdmin();
@@ -649,10 +754,11 @@ class AppState extends ChangeNotifier {
         SeasonVoter(
           v['studentId'],
           v['studentNum'],
-          v['fullName'],
+          personName(v['fullName']),
           v['gradeLevelId'],
           v['gradeLevel'],
           v['programCode'],
+          v['section'] ?? '',
           v['isActive'],
           v['password'],
           v['hasVoted'],
@@ -687,7 +793,7 @@ class AppState extends ChangeNotifier {
       ];
       adminCandidates = [
         for (final x in c) _candidate(x, studentNum: x['studentNum'])
-      ];
+      ]..sort((a, b) => byName(a.name, b.name));
     } on ApiException {
       adminPositions = [];
       adminCandidates = [];
@@ -731,7 +837,8 @@ class AppState extends ChangeNotifier {
         '/api/admin/students?search=${Uri.encodeQueryComponent(term)}&pageSize=$limit');
     return [
       for (final s in r['items'] as List)
-        Student(s['id'], s['studentNum'], s['fullName'], s['gradeLevelId'],
+        Student(s['id'], s['studentNum'], personName(s['fullName']),
+            s['gradeLevelId'],
             programId: s['programId'], programCode: s['programCode']),
     ];
   }
@@ -750,6 +857,40 @@ class AppState extends ChangeNotifier {
         'partyList': partyList.trim(),
         'motto': motto.trim(),
       });
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    }
+  }
+
+  Future<String?> addPosition(int electionId, String title, int rank) async {
+    try {
+      await Api.post('/api/admin/elections/$electionId/positions',
+          {'title': title.trim(), 'rank': rank});
+      await loadAdminCandidates(electionId);
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    }
+  }
+
+  Future<String?> updatePosition(
+      int electionId, int positionId, String title, int rank) async {
+    try {
+      await Api.put('/api/admin/elections/$electionId/positions/$positionId',
+          {'title': title.trim(), 'rank': rank});
+      await loadAdminCandidates(electionId);
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    }
+  }
+
+  Future<String?> deletePosition(int electionId, int positionId) async {
+    try {
+      await Api.delete(
+          '/api/admin/elections/$electionId/positions/$positionId');
+      await loadAdminCandidates(electionId);
       return null;
     } on ApiException catch (e) {
       return e.message;

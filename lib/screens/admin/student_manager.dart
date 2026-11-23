@@ -7,7 +7,7 @@ import '../../theme.dart';
 import '../../widgets/admin/student_card.dart';
 import '../../widgets/admin/student_form.dart';
 
-enum _ExcelAction { importFile, exportList, template }
+enum _ExcelAction { importFile, template }
 
 enum _Status { active, inactive, all }
 
@@ -47,8 +47,6 @@ class _StudentManagerPageState extends State<StudentManagerPage> {
             await state.refreshAdmin();
             if (mounted) await showImportResult(context, result);
           }
-        case _ExcelAction.exportList:
-          _toast(await ExcelIo.saveStudents());
         case _ExcelAction.template:
           _toast(await ExcelIo.saveTemplate());
       }
@@ -169,7 +167,8 @@ class _StudentManagerPageState extends State<StudentManagerPage> {
           if (term.isEmpty) return true;
           return s.fullName.toLowerCase().contains(term) ||
               s.studentNum.toLowerCase().contains(term) ||
-              (s.programCode ?? '').toLowerCase().contains(term);
+              (s.programCode ?? '').toLowerCase().contains(term) ||
+              s.section.toLowerCase().contains(term);
         }).toList();
         final filtered = schoolYear != null || gradeLevelId != null;
 
@@ -182,7 +181,7 @@ class _StudentManagerPageState extends State<StudentManagerPage> {
                   Expanded(
                     child: TextField(
                       decoration: const InputDecoration(
-                        hintText: 'Search name, number or program',
+                        hintText: 'Search name, number, section or program',
                         prefixIcon: Icon(Icons.search),
                       ),
                       onChanged: (v) => setState(() => q = v),
@@ -207,9 +206,6 @@ class _StudentManagerPageState extends State<StudentManagerPage> {
                         PopupMenuItem(
                             value: _ExcelAction.importFile,
                             child: Text('Import students (.xls, .xlsx)')),
-                        PopupMenuItem(
-                            value: _ExcelAction.exportList,
-                            child: Text('Export student list')),
                         PopupMenuItem(
                             value: _ExcelAction.template,
                             child: Text('Download template')),
