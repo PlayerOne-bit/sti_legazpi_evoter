@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+import '../anim.dart';
 import '../../data/mock.dart';
 import '../../theme.dart';
 import '../candidate_avatar.dart';
 
-/// Grid tile: portrait, name, party list, motto.
-/// [selectable] shows the check badge when [selected]. [onInfo] shows an info button.
 class CandidateCard extends StatelessWidget {
   final Candidate candidate;
   final bool selectable;
@@ -45,13 +44,14 @@ class CandidateCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = candidate;
-    return InkWell(
+    return Pressable(
+        child: InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFEAF1FB) : Colors.white,
+          color: selected ? C.tint : C.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
               color: selected ? C.blue : C.line, width: selected ? 2.5 : 1),
@@ -68,7 +68,7 @@ class CandidateCard extends StatelessWidget {
                   children: [
                     _portrait(c),
                     if (selectable && selected)
-                      const Positioned(
+                      Positioned(
                         top: 8,
                         left: 8,
                         child: CircleAvatar(
@@ -85,11 +85,11 @@ class CandidateCard extends StatelessWidget {
                         child: InkWell(
                           onTap: onInfo,
                           customBorder: const CircleBorder(),
-                          child: const Padding(
+                          child: Padding(
                             padding: EdgeInsets.all(2),
                             child: CircleAvatar(
                               radius: 14,
-                              backgroundColor: Colors.white,
+                              backgroundColor: C.surface,
                               child: Icon(Icons.info_outline,
                                   size: 18, color: C.blue),
                             ),
@@ -113,7 +113,7 @@ class CandidateCard extends StatelessWidget {
                   Text(c.partyList,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: C.muted, fontSize: 12)),
+                      style: TextStyle(color: C.muted, fontSize: 12)),
                   if (c.motto.isNotEmpty) ...[
                     const SizedBox(height: 6),
                     Text('“${c.motto}”',
@@ -130,7 +130,7 @@ class CandidateCard extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ));
   }
 }
 
@@ -138,7 +138,7 @@ void showCandidateSheet(BuildContext context, Candidate c) {
   showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     isScrollControlled: true,
     builder: (_) => Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
@@ -157,7 +157,7 @@ void showCandidateSheet(BuildContext context, Candidate c) {
                     Text(c.name,
                         style: const TextStyle(
                             fontSize: 20, fontWeight: FontWeight.w800)),
-                    Text(c.partyList, style: const TextStyle(color: C.muted)),
+                    Text(c.partyList, style: TextStyle(color: C.muted)),
                   ],
                 ),
               ),

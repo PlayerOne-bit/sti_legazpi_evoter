@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../widgets/anim.dart';
+import '../../widgets/brand_app_bar.dart';
 import 'package:flutter/services.dart';
 import '../../data/mock.dart';
 import '../../widgets/blue_button.dart';
@@ -90,7 +92,7 @@ class _VoteScreenState extends State<VoteScreen> {
           autofocus: true,
           onKeyEvent: _onKey,
           child: Scaffold(
-            appBar: AppBar(title: const Text('Your ballot')),
+            appBar: BrandAppBar(title: const Text('Your ballot')),
             body: CenteredBody(
               maxWidth: 1040,
               child: Column(
@@ -104,7 +106,7 @@ class _VoteScreenState extends State<VoteScreen> {
                       onTap: _go,
                     ),
                   ),
-                  const Divider(height: 1, color: C.line),
+                  Divider(height: 1, color: C.line),
                   Expanded(
                     child: PageView(
                       controller: _pc,
@@ -135,7 +137,7 @@ class _VoteScreenState extends State<VoteScreen> {
                               minimumSize: Size.zero,
                               padding: EdgeInsets.zero,
                               foregroundColor: C.blue,
-                              side: const BorderSide(color: C.blue, width: 1.5),
+                              side: BorderSide(color: C.blue, width: 1.5),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10)),
                             ),
@@ -190,7 +192,7 @@ class _PositionPage extends StatelessWidget {
                     style: const TextStyle(
                         fontSize: 22, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 2),
-                const Text('Tap a card, then swipe left or press Next.',
+                Text('Tap a card, then swipe left or press Next.',
                     style: TextStyle(color: C.muted)),
               ],
             ),
@@ -229,13 +231,13 @@ class _ReviewPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    return StaggerListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       children: [
         const Text('Review your ballot',
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
         const SizedBox(height: 2),
-        const Text('You cannot change your vote after submitting.',
+        Text('You cannot change your vote after submitting.',
             style: TextStyle(color: C.muted)),
         const SizedBox(height: 16),
         for (int i = 0; i < positions.length; i++)
@@ -264,15 +266,13 @@ class _ReviewPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(p.title,
-                            style:
-                                const TextStyle(color: C.muted, fontSize: 12)),
+                            style: TextStyle(color: C.muted, fontSize: 12)),
                         Text(c?.name ?? 'No choice yet',
                             style: const TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.w800)),
                         if (c != null)
                           Text(c.partyList,
-                              style: const TextStyle(
-                                  color: C.muted, fontSize: 13)),
+                              style: TextStyle(color: C.muted, fontSize: 13)),
                       ],
                     ),
                   ),

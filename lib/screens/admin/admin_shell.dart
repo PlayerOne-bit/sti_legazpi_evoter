@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../widgets/brand_app_bar.dart';
+import '../../theme.dart';
 import '../../data/mock.dart';
 import '../../widgets/centered_body.dart';
 import '../../widgets/loading_view.dart';
 import '../auth.dart';
 import 'admin_manager.dart';
-import 'candidate_manager.dart';
 import 'dashboard.dart';
 import 'history_manager.dart';
 import 'season_manager.dart';
@@ -23,7 +24,6 @@ class _AdminShellState extends State<AdminShell> {
     'Dashboard',
     'Seasons',
     'Students',
-    'Candidates',
     'History',
     'Admins'
   ];
@@ -31,7 +31,6 @@ class _AdminShellState extends State<AdminShell> {
     DashboardPage(),
     SeasonManagerPage(),
     StudentManagerPage(),
-    CandidateManagerPage(),
     HistoryManagerPage(),
     AdminManagerPage(),
   ];
@@ -60,18 +59,36 @@ class _AdminShellState extends State<AdminShell> {
           child: ListenableBuilder(
             listenable: state,
             builder: (_, __) {
-              if (!state.adminLoaded) {
-                return LoadingView(
-                    error: state.adminError, onRetry: state.loadAdmin);
-              }
-              return pages[i];
+              final Widget child = !state.adminLoaded
+                  ? LoadingView(
+                      key: const ValueKey('loading'),
+                      error: state.adminError,
+                      onRetry: state.loadAdmin)
+                  : KeyedSubtree(key: ValueKey(i), child: pages[i]);
+              return AnimatedSwitcher(
+                duration: const Duration(milliseconds: 260),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeIn,
+                transitionBuilder: (c, a) => FadeTransition(
+                  opacity: a,
+                  child: SlideTransition(
+                    position:
+                        Tween(begin: const Offset(0, 0.015), end: Offset.zero)
+                            .animate(a),
+                    child: c,
+                  ),
+                ),
+                child: child,
+              );
             },
           ),
         );
         return Scaffold(
-          appBar: AppBar(
-            title: Text(titles[i],
-                style: const TextStyle(fontWeight: FontWeight.w800)),
+          appBar: BrandAppBar(
+            title: Text(titles[i]),
+            subtitle: 'STI Legazpi eVoter  ·  Admin',
+            showLogo: true,
+            themeToggle: true,
             actions: [
               IconButton(
                 tooltip: 'Refresh',
@@ -92,24 +109,21 @@ class _AdminShellState extends State<AdminShell> {
                       selectedIndex: i,
                       onDestinationSelected: (v) => setState(() => i = v),
                       labelType: NavigationRailLabelType.all,
-                      backgroundColor: Colors.white,
+                      minWidth: 92,
+                      groupAlignment: -0.85,
                       destinations: const [
                         NavigationRailDestination(
                             icon: Icon(Icons.dashboard_outlined),
                             selectedIcon: Icon(Icons.dashboard),
                             label: Text('Dashboard')),
                         NavigationRailDestination(
-                            icon: Icon(Icons.event_note_outlined),
-                            selectedIcon: Icon(Icons.event_note),
+                            icon: Icon(Icons.how_to_vote_outlined),
+                            selectedIcon: Icon(Icons.how_to_vote),
                             label: Text('Seasons')),
                         NavigationRailDestination(
-                            icon: Icon(Icons.groups_outlined),
-                            selectedIcon: Icon(Icons.groups),
+                            icon: Icon(Icons.people_outline),
+                            selectedIcon: Icon(Icons.people),
                             label: Text('Students')),
-                        NavigationRailDestination(
-                            icon: Icon(Icons.badge_outlined),
-                            selectedIcon: Icon(Icons.badge),
-                            label: Text('Candidates')),
                         NavigationRailDestination(
                             icon: Icon(Icons.history), label: Text('History')),
                         NavigationRailDestination(
@@ -118,40 +132,47 @@ class _AdminShellState extends State<AdminShell> {
                             label: Text('Admins')),
                       ],
                     ),
-                    const VerticalDivider(width: 1),
+                    VerticalDivider(width: 1, color: C.line),
                     Expanded(child: body),
                   ],
                 )
               : body,
           bottomNavigationBar: wide
               ? null
-              : NavigationBar(
-                  selectedIndex: i,
-                  onDestinationSelected: (v) => setState(() => i = v),
-                  destinations: const [
-                    NavigationDestination(
-                        icon: Icon(Icons.dashboard_outlined),
-                        selectedIcon: Icon(Icons.dashboard),
-                        label: 'Dashboard'),
-                    NavigationDestination(
-                        icon: Icon(Icons.event_note_outlined),
-                        selectedIcon: Icon(Icons.event_note),
-                        label: 'Seasons'),
-                    NavigationDestination(
-                        icon: Icon(Icons.groups_outlined),
-                        selectedIcon: Icon(Icons.groups),
-                        label: 'Students'),
-                    NavigationDestination(
-                        icon: Icon(Icons.badge_outlined),
-                        selectedIcon: Icon(Icons.badge),
-                        label: 'Candidates'),
-                    NavigationDestination(
-                        icon: Icon(Icons.history), label: 'History'),
-                    NavigationDestination(
-                        icon: Icon(Icons.admin_panel_settings_outlined),
-                        selectedIcon: Icon(Icons.admin_panel_settings),
-                        label: 'Admins'),
-                  ],
+              : DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: C.line)),
+                    boxShadow: [
+                      BoxShadow(
+                          color: C.shadow,
+                          blurRadius: 16,
+                          offset: const Offset(0, -4))
+                    ],
+                  ),
+                  child: NavigationBar(
+                    selectedIndex: i,
+                    onDestinationSelected: (v) => setState(() => i = v),
+                    destinations: const [
+                      NavigationDestination(
+                          icon: Icon(Icons.dashboard_outlined),
+                          selectedIcon: Icon(Icons.dashboard),
+                          label: 'Dashboard'),
+                      NavigationDestination(
+                          icon: Icon(Icons.how_to_vote_outlined),
+                          selectedIcon: Icon(Icons.how_to_vote),
+                          label: 'Seasons'),
+                      NavigationDestination(
+                          icon: Icon(Icons.people_outline),
+                          selectedIcon: Icon(Icons.people),
+                          label: 'Students'),
+                      NavigationDestination(
+                          icon: Icon(Icons.history), label: 'History'),
+                      NavigationDestination(
+                          icon: Icon(Icons.admin_panel_settings_outlined),
+                          selectedIcon: Icon(Icons.admin_panel_settings),
+                          label: 'Admins'),
+                    ],
+                  ),
                 ),
         );
       },

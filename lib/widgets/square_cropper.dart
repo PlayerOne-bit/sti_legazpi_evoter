@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import '../theme.dart';
 
-/// Shows a 1:1 cropper. The admin drags and pinches/scrolls to frame the photo,
-/// then taps Confirm. Returns the cropped square as PNG bytes, or null if cancelled.
 Future<Uint8List?> showSquareCropper(BuildContext context, Uint8List bytes) =>
     showDialog<Uint8List>(
       context: context,
@@ -22,12 +20,12 @@ class _CropDialog extends StatefulWidget {
 }
 
 class _CropDialogState extends State<_CropDialog> {
-  static const double _box = 260; // on-screen crop square
-  static const int _out = 512; // exported size in pixels
+  static const double _box = 260;
+  static const int _out = 512;
 
   final _key = GlobalKey();
   final _ctl = TransformationController();
-  Size? _size; // image scaled so its short side fills the square
+  Size? _size;
   bool _busy = false;
   String? _error;
 
@@ -46,7 +44,6 @@ class _CropDialogState extends State<_CropDialog> {
       if (!mounted) return;
       setState(() {
         _size = Size(w, h);
-        // start centred
         _ctl.value =
             Matrix4.translationValues(-(w - _box) / 2, -(h - _box) / 2, 0);
       });
@@ -93,11 +90,11 @@ class _CropDialogState extends State<_CropDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Drag to move, pinch or scroll to zoom.',
+            Text('Drag to move, pinch or scroll to zoom.',
                 style: TextStyle(color: C.muted, fontSize: 13)),
             const SizedBox(height: 12),
             if (_error != null)
-              Text(_error!, style: TextStyle(color: Colors.red.shade700))
+              Text(_error!, style: TextStyle(color: C.danger))
             else if (size == null)
               const SizedBox(
                   height: _box,
@@ -125,7 +122,6 @@ class _CropDialogState extends State<_CropDialog> {
                         ),
                       ),
                     ),
-                    // Guides sit outside the boundary so they are not part of the crop.
                     IgnorePointer(
                       child: Container(
                         decoration: BoxDecoration(

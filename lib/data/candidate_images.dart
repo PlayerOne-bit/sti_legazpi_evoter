@@ -4,13 +4,14 @@ import 'package:http/http.dart' as http;
 import '../widgets/square_cropper.dart';
 import 'api.dart';
 
-/// Picks a photo and uploads it for a candidate. Returns an error message, or null on success
-/// (also null when the admin cancels the picker).
 class CandidateImages {
   static const maxBytes = 2 * 1024 * 1024;
 
-  static Future<String?> pickAndUpload(
-      BuildContext context, int candidateId) async {
+  static Future<String?> pickAndUpload(BuildContext context, int candidateId) =>
+      pickAndUploadTo(context, '/api/admin/candidates/$candidateId/image');
+
+  static Future<String?> pickAndUploadTo(
+      BuildContext context, String path) async {
     final picked = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
@@ -22,18 +23,17 @@ class CandidateImages {
     if (bytes == null) return 'Could not read that file.';
     if (bytes.length > 15 * 1024 * 1024) return 'Choose an image under 15 MB.';
 
-    // Crop to a square; the result is a 512 x 512 PNG, well under the 2 MB limit.
     if (!context.mounted) return null;
     final cropped = await showSquareCropper(context, bytes);
     if (cropped == null) return null;
     if (cropped.length > maxBytes) return 'The image must be 2 MB or smaller.';
 
     try {
-      final req = http.MultipartRequest('POST',
-          Uri.parse('${Api.baseUrl}/api/admin/candidates/$candidateId/image'))
-        ..headers['Authorization'] = 'Bearer ${Api.token}'
-        ..files.add(http.MultipartFile.fromBytes('file', cropped,
-            filename: 'photo.png'));
+      final req =
+          http.MultipartRequest('POST', Uri.parse('${Api.baseUrl}$path'))
+            ..headers['Authorization'] = 'Bearer ${Api.token}'
+            ..files.add(http.MultipartFile.fromBytes('file', cropped,
+                filename: 'photo.png'));
       final res = await http.Response.fromStream(
           await req.send().timeout(const Duration(seconds: 30)));
       if (res.statusCode >= 200 && res.statusCode < 300) return null;

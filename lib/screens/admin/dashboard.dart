@@ -1,21 +1,18 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../widgets/anim.dart';
 import '../../data/api.dart';
 import '../../data/mock.dart';
 import '../../theme.dart';
 import '../../widgets/blue_button.dart';
 import 'winner_screen.dart';
 
-/// Admin home: turnout numbers and every season that is open, waiting for its tally,
-/// or still to come, each with a live timer.
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
 
   void _close(BuildContext context, Election e) => Navigator.of(context)
       .push(MaterialPageRoute(builder: (_) => WinnerScreen(election: e)));
 
-  /// Open seasons first (closing soonest), then seasons waiting for a tally,
-  /// then upcoming seasons (starting soonest).
   List<Election> _seasons() {
     int rank(Election e) => switch (e.status) {
           ElectionStatus.open => 0,
@@ -42,14 +39,14 @@ class DashboardPage extends StatelessWidget {
         final voted = state.dashVoted;
         final pct = total == 0 ? 0 : (voted * 100 / total).round();
         final seasons = _seasons();
-        return ListView(
+        return StaggerListView(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
           children: [
             Text('Welcome ${Api.displayName ?? 'admin'}!',
                 style:
                     const TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
             const SizedBox(height: 2),
-            const Text('Here is how the voting seasons are doing.',
+            Text('Here is how the voting seasons are doing.',
                 style: TextStyle(color: C.muted)),
             const SizedBox(height: 18),
             Row(
@@ -71,7 +68,7 @@ class DashboardPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: cardBox(),
-                child: const Row(
+                child: Row(
                   children: [
                     Icon(Icons.event_busy, color: C.muted),
                     SizedBox(width: 12),
@@ -86,7 +83,6 @@ class DashboardPage extends StatelessWidget {
             else
               for (final e in seasons)
                 _SeasonTimerCard(
-                  // A new key restarts the timer when the season changes status or dates.
                   key: ValueKey(
                       '${e.id}-${e.status.name}-${e.startDate.millisecondsSinceEpoch}-${e.endDate.millisecondsSinceEpoch}'),
                   election: e,
@@ -100,8 +96,6 @@ class DashboardPage extends StatelessWidget {
   }
 }
 
-/// One season with a countdown: "Starts in" for upcoming, "Closes in" for open.
-/// A season that has ended shows a prompt to count the votes instead.
 class _SeasonTimerCard extends StatefulWidget {
   final Election election;
   final VoidCallback onFinished;
@@ -118,7 +112,6 @@ class _SeasonTimerCard extends StatefulWidget {
 }
 
 class _SeasonTimerCardState extends State<_SeasonTimerCard> {
-  // Fixed for this card's lifetime; the parent swaps the card (new key) when the status changes.
   late final ElectionStatus _status = widget.election.status;
   Timer? _timer;
   Duration _left = Duration.zero;
@@ -161,13 +154,9 @@ class _SeasonTimerCardState extends State<_SeasonTimerCard> {
 
   Widget _chip() {
     final (String label, Color bg, Color fg) = switch (_status) {
-      ElectionStatus.upcoming => ('Upcoming', const Color(0xFFE3ECF8), C.blue),
-      ElectionStatus.open => ('Open now', const Color(0xFFE7F5EE), C.ok),
-      ElectionStatus.ended => (
-          'Tally pending',
-          const Color(0xFFFFF3C4),
-          const Color(0xFF8A6500)
-        ),
+      ElectionStatus.upcoming => ('Upcoming', C.tint, C.blue),
+      ElectionStatus.open => ('Open now', C.okBg, C.ok),
+      ElectionStatus.ended => ('Tally pending', C.warnBg, C.warnFg),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -186,8 +175,16 @@ class _SeasonTimerCardState extends State<_SeasonTimerCard> {
         _status == ElectionStatus.upcoming ? 'Starts in' : 'Closes in';
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-      decoration:
-          BoxDecoration(color: C.navy, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+            colors: [C.blue, C.blueDeep],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(color: C.shadow, blurRadius: 14, offset: const Offset(0, 6))
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -250,7 +247,7 @@ class _SeasonTimerCardState extends State<_SeasonTimerCard> {
                         style: const TextStyle(
                             fontSize: 17, fontWeight: FontWeight.w800)),
                     Text('School year ${e.schoolYear}',
-                        style: const TextStyle(color: C.muted)),
+                        style: TextStyle(color: C.muted)),
                   ],
                 ),
               ),
@@ -262,18 +259,16 @@ class _SeasonTimerCardState extends State<_SeasonTimerCard> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                  color: const Color(0xFFFFF3C4),
-                  borderRadius: BorderRadius.circular(12)),
-              child: const Row(
+                  color: C.warnBg, borderRadius: BorderRadius.circular(12)),
+              child: Row(
                 children: [
-                  Icon(Icons.hourglass_bottom, color: Color(0xFF8A6500)),
+                  Icon(Icons.hourglass_bottom, color: C.warnFg),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
                         'Voting has ended. Count the votes to see the winners.',
                         style: TextStyle(
-                            color: Color(0xFF8A6500),
-                            fontWeight: FontWeight.w600)),
+                            color: C.warnFg, fontWeight: FontWeight.w600)),
                   ),
                 ],
               ),
@@ -335,16 +330,22 @@ class _Stat extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: cardBox(
-          color: accent ? C.navy : Colors.white,
-          border: accent ? C.navy : C.line),
+          color: accent ? C.navy : C.surface, border: accent ? C.navy : C.line),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value,
-              style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
-                  color: accent ? C.yellow : C.ink)),
+          Builder(builder: (_) {
+            final style = TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                color: accent ? C.yellow : C.ink);
+            final pct = value.endsWith('%');
+            final n = int.tryParse(
+                pct ? value.substring(0, value.length - 1) : value);
+            return n == null
+                ? Text(value, style: style)
+                : CountUp(value: n, suffix: pct ? '%' : '', style: style);
+          }),
           const SizedBox(height: 2),
           Text(label,
               style: TextStyle(

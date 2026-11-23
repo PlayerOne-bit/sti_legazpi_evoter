@@ -168,7 +168,7 @@ class _AuthPageState extends State<AuthPage> {
   Widget _codeForm() => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(Icons.mark_email_read_outlined, size: 44, color: C.blue),
+          Icon(Icons.mark_email_read_outlined, size: 44, color: C.blue),
           const SizedBox(height: 14),
           const Text('Check your email',
               textAlign: TextAlign.center,
@@ -177,7 +177,7 @@ class _AuthPageState extends State<AuthPage> {
           Text(
               'We sent a 6-digit code to $_emailHint. It expires in 10 minutes.',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: C.muted)),
+              style: TextStyle(color: C.muted)),
           const SizedBox(height: 20),
           TextField(
             controller: _code,
@@ -194,14 +194,12 @@ class _AuthPageState extends State<AuthPage> {
           if (error != null) ...[
             const SizedBox(height: 14),
             Text(error!,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.red.shade700)),
+                textAlign: TextAlign.center, style: TextStyle(color: C.danger)),
           ],
           if (info != null) ...[
             const SizedBox(height: 14),
             Text(info!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: C.ok)),
+                textAlign: TextAlign.center, style: TextStyle(color: C.ok)),
           ],
           const SizedBox(height: 20),
           BlueButton(
@@ -280,8 +278,7 @@ class _AuthPageState extends State<AuthPage> {
           if (error != null) ...[
             const SizedBox(height: 14),
             Text(error!,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.red.shade700)),
+                textAlign: TextAlign.center, style: TextStyle(color: C.danger)),
           ],
           const SizedBox(height: 22),
           BlueButton(
@@ -295,6 +292,16 @@ class _AuthPageState extends State<AuthPage> {
   Widget build(BuildContext context) {
     final form = _challenge == null ? _form() : _codeForm();
     return Scaffold(
+      floatingActionButtonLocation: FloatingActionButtonLocation.endTop,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Material(
+          color: C.surface,
+          shape: const CircleBorder(),
+          elevation: 2,
+          child: ThemeToggleButton(color: C.blue),
+        ),
+      ),
       body: LayoutBuilder(
         builder: (context, c) {
           if (c.maxWidth >= 720) {
@@ -302,7 +309,13 @@ class _AuthPageState extends State<AuthPage> {
               children: [
                 Expanded(
                   child: Container(
-                    color: C.navy,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [C.blue, C.dark ? C.navy : C.blueDeep],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
                     padding: const EdgeInsets.all(48),
                     alignment: Alignment.centerLeft,
                     child: _brand(large: c.maxWidth >= 1000),
@@ -313,8 +326,12 @@ class _AuthPageState extends State<AuthPage> {
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.all(32),
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 420),
-                        child: form,
+                        constraints: const BoxConstraints(maxWidth: 440),
+                        child: Container(
+                          padding: const EdgeInsets.all(28),
+                          decoration: cardBox(),
+                          child: form,
+                        ),
                       ),
                     ),
                   ),
@@ -326,7 +343,13 @@ class _AuthPageState extends State<AuthPage> {
             padding: EdgeInsets.zero,
             children: [
               Container(
-                color: C.navy,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [C.blue, C.dark ? C.navy : C.blueDeep],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
                 padding: const EdgeInsets.fromLTRB(24, 72, 24, 36),
                 child: _brand(),
               ),

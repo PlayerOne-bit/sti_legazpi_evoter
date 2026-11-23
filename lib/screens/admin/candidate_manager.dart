@@ -1,22 +1,44 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../widgets/anim.dart';
+import '../../widgets/brand_app_bar.dart';
 import '../../data/api.dart';
 import '../../data/candidate_images.dart';
 import '../../data/mock.dart';
-import '../../widgets/blue_button.dart';
+import '../../widgets/centered_body.dart';
 import '../../widgets/candidate_avatar.dart';
 import '../../theme.dart';
 
-class CandidateManagerPage extends StatefulWidget {
-  const CandidateManagerPage({super.key});
+class SeasonCandidatesScreen extends StatefulWidget {
+  final Election election;
+  const SeasonCandidatesScreen({super.key, required this.election});
 
   @override
-  State<CandidateManagerPage> createState() => _CandidateManagerPageState();
+  State<SeasonCandidatesScreen> createState() => _SeasonCandidatesScreenState();
 }
 
-class _CandidateManagerPageState extends State<CandidateManagerPage> {
-  int? _eid;
-  int? _busyId; // candidate whose photo is uploading
+class _SeasonCandidatesScreenState extends State<SeasonCandidatesScreen> {
+  int? _busyId;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _reload();
+  }
+
+  Future<void> _reload() async {
+    setState(() => _loading = true);
+    await state.loadAdminCandidates(widget.election.id);
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Election get _election {
+    for (final e in state.elections) {
+      if (e.id == widget.election.id) return e;
+    }
+    return widget.election;
+  }
 
   List<Candidate> _candidatesFor(int positionId) =>
       state.adminCandidates.where((c) => c.positionId == positionId).toList();
@@ -44,12 +66,13 @@ class _CandidateManagerPageState extends State<CandidateManagerPage> {
     if (err != null) _snack(err);
   }
 
-  Future<void> _add(BuildContext context, int electionId) async {
+  Future<void> _add(BuildContext context, int electionId,
+      {int? positionId}) async {
     final search = TextEditingController();
     final party = TextEditingController();
     final motto = TextEditingController();
-    int? pos =
-        state.adminPositions.isEmpty ? null : state.adminPositions.first.id;
+    int? pos = positionId ??
+        (state.adminPositions.isEmpty ? null : state.adminPositions.first.id);
     final taken = {for (final c in state.adminCandidates) c.studentNum};
 
     Student? picked;
@@ -127,7 +150,7 @@ class _CandidateManagerPageState extends State<CandidateManagerPage> {
                                           fontWeight: FontWeight.w700)),
                                   Text(
                                       '${picked!.studentNum}, ${state.gradeName(picked!.gradeLevelId)}',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                           color: C.muted, fontSize: 13)),
                                 ],
                               ),
@@ -201,7 +224,7 @@ class _CandidateManagerPageState extends State<CandidateManagerPage> {
                           ),
                         )
                       else if (!searching && search.text.trim().isNotEmpty)
-                        const Padding(
+                        Padding(
                           padding: EdgeInsets.only(top: 8),
                           child: Text('No matching students.',
                               style: TextStyle(color: C.muted)),
@@ -232,14 +255,13 @@ class _CandidateManagerPageState extends State<CandidateManagerPage> {
                       decoration: const InputDecoration(labelText: 'Motto'),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
+                    Text(
                         'After saving, tap the candidate\'s photo circle to add a photo.',
                         style: TextStyle(color: C.muted, fontSize: 12)),
                     if (error != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 10),
-                        child: Text(error!,
-                            style: TextStyle(color: Colors.red.shade700)),
+                        child: Text(error!, style: TextStyle(color: C.danger)),
                       ),
                   ],
                 ),
@@ -318,7 +340,7 @@ class _CandidateManagerPageState extends State<CandidateManagerPage> {
               child: const Text('Cancel')),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: C.danger),
             child: const Text('Remove'),
           ),
         ],
@@ -343,8 +365,7 @@ class _CandidateManagerPageState extends State<CandidateManagerPage> {
             bottom: 0,
             child: Container(
               padding: const EdgeInsets.all(3),
-              decoration:
-                  const BoxDecoration(color: C.blue, shape: BoxShape.circle),
+              decoration: BoxDecoration(color: C.blue, shape: BoxShape.circle),
               child:
                   const Icon(Icons.camera_alt, size: 12, color: Colors.white),
             ),
@@ -362,150 +383,295 @@ class _CandidateManagerPageState extends State<CandidateManagerPage> {
     );
   }
 
+  Widget _header(Election e, bool editable) {
+    final total = state.adminCandidates.length;
+    final positions = state.adminPositions.length;
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [C.blue, C.blueDeep],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(e.club,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800)),
+          Text('School year ${e.schoolYear}',
+              style: const TextStyle(color: Colors.white70)),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              _HeaderStat(value: '$total', label: 'Candidates'),
+              const SizedBox(width: 10),
+              _HeaderStat(value: '$positions', label: 'Positions'),
+              const SizedBox(width: 10),
+              _HeaderStat(
+                  value:
+                      '${state.adminPositions.where((p) => _candidatesFor(p.id).isEmpty).length}',
+                  label: 'Still empty'),
+            ],
+          ),
+          if (!editable) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.lock_outline, color: C.yellow, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text('Voting has started, so candidates are locked.',
+                        style: TextStyle(color: Colors.white, fontSize: 13)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _positionSection(Position p, Election e, bool editable) {
+    final list = _candidatesFor(p.id);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+      decoration: cardBox(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(p.title,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w800)),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                decoration: BoxDecoration(
+                    color: list.isEmpty ? C.warnBg : C.tint,
+                    borderRadius: BorderRadius.circular(20)),
+                child: Text(
+                    list.isEmpty
+                        ? 'Empty'
+                        : '${list.length} candidate${list.length == 1 ? '' : 's'}',
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: list.isEmpty ? C.warnFg : C.blue)),
+              ),
+              if (editable)
+                IconButton(
+                  tooltip: 'Add a ${p.title} candidate',
+                  icon: Icon(Icons.person_add_alt_1, color: C.blue),
+                  onPressed: () => _add(context, e.id, positionId: p.id),
+                )
+              else
+                const SizedBox(width: 6),
+            ],
+          ),
+          const SizedBox(height: 6),
+          if (list.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(0, 2, 6, 6),
+              child: Text(
+                  editable
+                      ? 'No candidates yet. Use the add button to pick a student.'
+                      : 'No candidates.',
+                  style: TextStyle(color: C.muted, fontSize: 13)),
+            ),
+          for (final c in list) _candidateTile(c, e, editable),
+        ],
+      ),
+    );
+  }
+
+  Widget _candidateTile(Candidate c, Election e, bool editable) {
+    final details = [
+      c.studentNum,
+      if (c.partyList.isNotEmpty) c.partyList,
+    ].join('  ·  ');
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8, right: 6),
+      padding: const EdgeInsets.fromLTRB(10, 10, 4, 10),
+      decoration: BoxDecoration(
+        color: C.surface2,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: C.line),
+      ),
+      child: Row(
+        children: [
+          _avatar(c, e.id, editable),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(c.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                Text(details,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: C.muted, fontSize: 13)),
+                if (c.motto.isNotEmpty)
+                  Text('"${c.motto}"',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: C.muted,
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic)),
+              ],
+            ),
+          ),
+          if (editable)
+            PopupMenuButton<String>(
+              tooltip: 'Options',
+              onSelected: (v) {
+                switch (v) {
+                  case 'photo':
+                    _photo(c, e.id);
+                  case 'clear':
+                    _removePhoto(c, e.id);
+                  case 'remove':
+                    _remove(c, e.id);
+                }
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                    value: 'photo',
+                    child: ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.photo_camera_outlined),
+                        title: Text(c.imageUrl == null
+                            ? 'Add photo'
+                            : 'Change photo'))),
+                if (c.imageUrl != null)
+                  const PopupMenuItem(
+                      value: 'clear',
+                      child: ListTile(
+                          dense: true,
+                          leading: Icon(Icons.hide_image_outlined),
+                          title: Text('Remove photo'))),
+                PopupMenuItem(
+                    value: 'remove',
+                    child: ListTile(
+                        dense: true,
+                        leading:
+                            Icon(Icons.person_remove_outlined, color: C.danger),
+                        title: Text('Remove candidate',
+                            style: TextStyle(color: C.danger)))),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: state,
       builder: (context, _) {
-        final list = state.elections;
-        if (list.isEmpty) {
-          return const Center(
-            child: Text('Create a voting season first.',
-                style: TextStyle(color: C.muted)),
-          );
-        }
-
-        final e =
-            list.firstWhere((x) => x.id == _eid, orElse: () => list.first);
-
-        if (state.adminCandElectionId != e.id) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            if (state.adminCandElectionId != e.id) {
-              state.loadAdminCandidates(e.id);
-            }
-          });
-        }
-
-        final loaded = state.adminCandElectionId == e.id;
+        final e = _election;
         final editable = e.status == ElectionStatus.upcoming;
-
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-          children: [
-            DropdownButtonFormField<int>(
-              initialValue: e.id,
-              decoration: const InputDecoration(labelText: 'Season'),
-              items: [
-                for (final x in list)
-                  DropdownMenuItem(
-                      value: x.id, child: Text('${x.club}, ${x.schoolYear}')),
-              ],
-              onChanged: (v) => setState(() => _eid = v),
-            ),
-            const SizedBox(height: 12),
-            if (editable)
-              BlueButton(
-                label: 'Add candidate',
-                icon: Icons.person_add,
-                onPressed: loaded ? () => _add(context, e.id) : null,
-              )
-            else
-              const Text('Candidates are locked once voting starts.',
-                  style: TextStyle(color: C.muted)),
-            const SizedBox(height: 18),
-            if (!loaded)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: CircularProgressIndicator(),
-                ),
-              )
-            else if (state.adminPositions.isEmpty)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Text('No positions available for this season.',
-                      style: TextStyle(color: C.muted)),
-                ),
-              )
-            else
-              for (final p in state.adminPositions) ...[
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8, top: 6),
-                  child: Text(p.title,
-                      style: const TextStyle(
-                          fontSize: 17, fontWeight: FontWeight.w800)),
-                ),
-                if (_candidatesFor(p.id).isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 10),
-                    child: Text('No candidates yet.',
-                        style: TextStyle(color: C.muted)),
-                  ),
-                for (final c in _candidatesFor(p.id))
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(12),
-                    decoration: cardBox(),
-                    child: Row(
-                      children: [
-                        _avatar(c, e.id, editable),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(c.name,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w700)),
-                              Text('${c.studentNum}, ${c.partyList}',
-                                  style: const TextStyle(
-                                      color: C.muted, fontSize: 13)),
-                              if (c.motto.isNotEmpty)
-                                Text('"${c.motto}"',
-                                    style: const TextStyle(
-                                        color: C.muted,
-                                        fontSize: 12,
-                                        fontStyle: FontStyle.italic)),
-                            ],
-                          ),
-                        ),
-                        if (editable)
-                          PopupMenuButton<String>(
-                            tooltip: 'Options',
-                            onSelected: (v) {
-                              switch (v) {
-                                case 'photo':
-                                  _photo(c, e.id);
-                                case 'clear':
-                                  _removePhoto(c, e.id);
-                                case 'remove':
-                                  _remove(c, e.id);
-                              }
-                            },
-                            itemBuilder: (_) => [
-                              PopupMenuItem(
-                                  value: 'photo',
-                                  child: Text(c.imageUrl == null
-                                      ? 'Add photo'
-                                      : 'Change photo')),
-                              if (c.imageUrl != null)
-                                const PopupMenuItem(
-                                    value: 'clear',
-                                    child: Text('Remove photo')),
-                              const PopupMenuItem(
-                                  value: 'remove',
-                                  child: Text('Remove candidate')),
-                            ],
-                          ),
-                      ],
+        final ready = !_loading && state.adminCandElectionId == e.id;
+        return Scaffold(
+          appBar: BrandAppBar(
+            title: const Text('Candidates',
+                style: TextStyle(fontWeight: FontWeight.w800)),
+            actions: [
+              IconButton(
+                tooltip: 'Refresh',
+                icon: const Icon(Icons.refresh),
+                onPressed: _loading ? null : _reload,
+              ),
+            ],
+          ),
+          floatingActionButton:
+              editable && ready && state.adminPositions.isNotEmpty
+                  ? FloatingActionButton.extended(
+                      onPressed: () => _add(context, e.id),
+                      icon: const Icon(Icons.person_add),
+                      label: const Text('Add candidate'),
+                    )
+                  : null,
+          body: CenteredBody(
+            maxWidth: 800,
+            child: StaggerListView(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 96),
+              children: [
+                _header(e, editable),
+                const SizedBox(height: 18),
+                if (!ready)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: CircularProgressIndicator(),
                     ),
-                  ),
+                  )
+                else if (state.adminPositions.isEmpty)
+                  Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Text('This season has no positions.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: C.muted)),
+                  )
+                else
+                  for (final p in state.adminPositions)
+                    _positionSection(p, e, editable),
               ],
-          ],
+            ),
+          ),
         );
       },
+    );
+  }
+}
+
+class _HeaderStat extends StatelessWidget {
+  final String value;
+  final String label;
+  const _HeaderStat({required this.value, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(value,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800)),
+            Text(label,
+                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          ],
+        ),
+      ),
     );
   }
 }

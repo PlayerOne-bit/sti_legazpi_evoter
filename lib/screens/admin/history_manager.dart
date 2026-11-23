@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/anim.dart';
 import '../../data/mock.dart';
 import '../../widgets/admin/history_card.dart';
 import 'season_screen.dart';
@@ -10,7 +11,7 @@ class HistoryManagerPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: state,
-      builder: (context, _) => ListView(
+      builder: (context, _) => StaggerListView(
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
         children: [
           if (state.history.isEmpty)

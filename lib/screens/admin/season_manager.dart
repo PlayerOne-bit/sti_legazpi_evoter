@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import '../../widgets/anim.dart';
 import '../../data/mock.dart';
 import '../../theme.dart';
 import '../../widgets/admin/election_card.dart';
 import '../../widgets/admin/election_form.dart';
 import '../../widgets/blue_button.dart';
+import 'candidate_manager.dart';
+import 'season_voters_screen.dart';
 import 'winner_screen.dart';
 
-/// Create, edit, delete, and close voting seasons.
 class SeasonManagerPage extends StatelessWidget {
   const SeasonManagerPage({super.key});
 
@@ -34,6 +36,19 @@ class SeasonManagerPage extends StatelessWidget {
         .showSnackBar(SnackBar(content: Text(err ?? 'Season deleted.')));
   }
 
+  Future<void> _candidates(BuildContext context, Election e) async {
+    await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => SeasonCandidatesScreen(election: e)));
+    await state.refreshAdmin();
+  }
+
+  Future<void> _voters(BuildContext context, Election e) async {
+    await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => SeasonVotersScreen(
+            electionId: e.id, club: e.club, schoolYear: e.schoolYear)));
+    await state.refreshAdmin();
+  }
+
   void _close(BuildContext context, Election e) => Navigator.of(context)
       .push(MaterialPageRoute(builder: (_) => WinnerScreen(election: e)));
 
@@ -56,7 +71,7 @@ class SeasonManagerPage extends StatelessWidget {
             .where((e) => e.status == ElectionStatus.upcoming)
             .toList()
           ..sort((a, b) => a.startDate.compareTo(b.startDate));
-        return ListView(
+        return StaggerListView(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
           children: [
             BlueButton(
@@ -68,21 +83,30 @@ class SeasonManagerPage extends StatelessWidget {
             for (final e in open)
               ElectionCard(
                 election: e,
+                onCandidates: () => _candidates(context, e),
+                onVoters: () => _voters(context, e),
                 onClose: () => _close(context, e),
                 onEdit: () => showElectionForm(context, existing: e),
               ),
             if (ended.isNotEmpty) _heading('Voting ended, tally pending'),
             for (final e in ended)
-              ElectionCard(election: e, onClose: () => _close(context, e)),
+              ElectionCard(
+                election: e,
+                onCandidates: () => _candidates(context, e),
+                onVoters: () => _voters(context, e),
+                onClose: () => _close(context, e),
+              ),
             if (upcoming.isNotEmpty) _heading('Upcoming'),
             for (final e in upcoming)
               ElectionCard(
                 election: e,
+                onCandidates: () => _candidates(context, e),
+                onVoters: () => _voters(context, e),
                 onEdit: () => showElectionForm(context, existing: e),
                 onDelete: () => _delete(context, e),
               ),
             if (open.isEmpty && ended.isEmpty && upcoming.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.all(28),
                 child: Center(
                   child: Text('No seasons yet. Create one to schedule a vote.',

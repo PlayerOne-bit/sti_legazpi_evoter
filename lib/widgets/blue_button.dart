@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/anim.dart';
 import '../theme.dart';
 
 class BlueButton extends StatelessWidget {
@@ -21,33 +22,44 @@ class BlueButton extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (icon != null) ...[Icon(icon, size: 20), const SizedBox(width: 8)],
-        Flexible(child: Text(label, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w700))),
+        Flexible(
+            child: Text(label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.w700))),
       ],
     );
-    final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(10));
+    final shape =
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12));
     const size = Size.fromHeight(52);
     if (outlined) {
-      return OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          minimumSize: size,
-          shape: shape,
-          foregroundColor: C.blue,
-          side: const BorderSide(color: C.blue, width: 1.5),
+      return Pressable(
+        enabled: onPressed != null,
+        child: OutlinedButton(
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(
+            minimumSize: size,
+            shape: shape,
+            foregroundColor: C.blue,
+            side: BorderSide(color: C.blue, width: 1.5),
+          ),
+          child: child,
         ),
-        child: child,
       );
     }
-    return FilledButton(
-      onPressed: onPressed,
-      style: FilledButton.styleFrom(
-        minimumSize: size,
-        shape: shape,
-        backgroundColor: C.blue,
-        foregroundColor: Colors.white,
-        disabledBackgroundColor: C.line,
+    return Pressable(
+      enabled: onPressed != null,
+      child: FilledButton(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          minimumSize: size,
+          shape: shape,
+          backgroundColor: C.blue,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: C.line,
+          disabledForegroundColor: C.muted,
+        ),
+        child: child,
       ),
-      child: child,
     );
   }
 }

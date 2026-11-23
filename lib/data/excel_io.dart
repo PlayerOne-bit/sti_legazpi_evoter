@@ -12,12 +12,10 @@ import 'api.dart';
 class ImportResult {
   final int studentsAdded;
   final int candidatesAdded;
-  final List<String> errors; // "Students row 12: ..."
+  final List<String> errors;
   const ImportResult(this.studentsAdded, this.candidatesAdded, this.errors);
 }
 
-/// Excel import and export against /api/admin. Every method returns a message
-/// for the snackbar or dialog, or throws nothing the screen has to catch.
 class ExcelIo {
   static Map<String, String> get _auth =>
       {if (Api.token != null) 'Authorization': 'Bearer ${Api.token}'};
@@ -49,14 +47,13 @@ class ExcelIo {
     return res.bodyBytes;
   }
 
-  /// Downloads an .xlsx from [path] and lets the person choose where to save it.
   static Future<String> save(String path, String fileName) async {
     try {
       final bytes = await _download(path);
       final target = await FilePicker.platform.saveFile(
         dialogTitle: 'Save Excel file',
         fileName: fileName,
-        bytes: bytes, // Android, iOS and web write these themselves
+        bytes: bytes,
         type: FileType.custom,
         allowedExtensions: const ['xlsx'],
       );
@@ -79,24 +76,23 @@ class ExcelIo {
   static Future<String> saveTemplate() =>
       save('/api/admin/excel/template', 'sti-evoter-template.xlsx');
 
-  static Future<String> saveStudents({int? electionId}) => save(
-      '/api/admin/students/export${electionId == null ? '' : '?electionId=$electionId'}',
-      'sti-evoter-students.xlsx');
+  static Future<String> saveStudents() =>
+      save('/api/admin/students/export', 'sti-evoter-students.xlsx');
 
-  /// Results of a finished season (History id).
+  static Future<String> saveVoters(int electionId, String fileName) =>
+      save('/api/admin/students/export?electionId=$electionId', fileName);
+
   static Future<String> saveHistory(int historyId) =>
       save('/api/admin/history/$historyId/export', 'sti-evoter-results.xlsx');
 
   static Future<String> saveResults(int electionId, String fileName) =>
       save('/api/admin/elections/$electionId/export', fileName);
 
-  /// Lets the person pick an .xls or .xlsx file and uploads it.
-  /// Returns null when they close the picker without choosing a file.
   static Future<ImportResult?> pickAndImport({int? electionId}) async {
     final picked = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['xls', 'xlsx'],
-      withData: true, // bytes on every platform, including web
+      withData: true,
     );
     if (picked == null || picked.files.isEmpty) return null;
     final file = picked.files.first;
@@ -160,12 +156,12 @@ Future<void> showImportResult(BuildContext context, ImportResult r) {
                 for (final e in r.errors.take(shown))
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(e,
-                        style: const TextStyle(color: C.muted, fontSize: 12)),
+                    child:
+                        Text(e, style: TextStyle(color: C.muted, fontSize: 12)),
                   ),
                 if (r.errors.length > shown)
                   Text('...and ${r.errors.length - shown} more.',
-                      style: const TextStyle(color: C.muted, fontSize: 12)),
+                      style: TextStyle(color: C.muted, fontSize: 12)),
               ],
             ],
           ),

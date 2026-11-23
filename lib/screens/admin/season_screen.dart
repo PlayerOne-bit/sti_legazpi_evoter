@@ -1,14 +1,34 @@
 import 'package:flutter/material.dart';
+import '../../widgets/anim.dart';
+import '../../widgets/brand_app_bar.dart';
 import '../../data/api.dart';
 import '../../data/excel_io.dart';
 import '../../data/mock.dart';
+import '../../widgets/admin/poll_results.dart';
+import 'season_voters_screen.dart';
 import '../../widgets/centered_body.dart';
 import '../../theme.dart';
 
-/// Details of one finished season (opened from History).
-class SeasonScreen extends StatelessWidget {
+class SeasonScreen extends StatefulWidget {
   final Season season;
   const SeasonScreen({super.key, required this.season});
+
+  @override
+  State<SeasonScreen> createState() => _SeasonScreenState();
+}
+
+class _SeasonScreenState extends State<SeasonScreen> {
+  Season get season => widget.season;
+  late final Future<_Poll> _poll = _loadPoll();
+
+  Future<_Poll> _loadPoll() async {
+    final tally = await state.fetchAdminTally(season.electionId);
+    var photos = <int, String>{};
+    try {
+      photos = await state.fetchCandidatePhotos(season.electionId);
+    } catch (_) {}
+    return _Poll(tally.where((p) => p.entries.isNotEmpty).toList(), photos);
+  }
 
   Widget _stat(String label, String value) => Expanded(
         child: Container(
@@ -20,7 +40,7 @@ class SeasonScreen extends StatelessWidget {
               Text(value,
                   style: const TextStyle(
                       fontSize: 24, fontWeight: FontWeight.w800)),
-              Text(label, style: const TextStyle(color: C.muted, fontSize: 13)),
+              Text(label, style: TextStyle(color: C.muted, fontSize: 13)),
             ],
           ),
         ),
@@ -32,7 +52,6 @@ class SeasonScreen extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  /// Deletes this finished season for good, so its club and school year can be used again.
   Future<void> _delete(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
     final nav = Navigator.of(context);
@@ -49,7 +68,7 @@ class SeasonScreen extends StatelessWidget {
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text('Cancel')),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+            style: FilledButton.styleFrom(backgroundColor: C.danger),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Delete season'),
           ),
@@ -67,7 +86,6 @@ class SeasonScreen extends StatelessWidget {
     }
   }
 
-  /// Creates a new upcoming season with the same club, grade levels, positions and candidates.
   Future<void> _runAgain(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
     final nav = Navigator.of(context);
@@ -110,7 +128,7 @@ class SeasonScreen extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                       'Creates a new upcoming season with the same grade levels, positions and '
                       'candidates. Votes and results are not copied. You can edit it afterwards in Seasons.',
                       style: TextStyle(color: C.muted, fontSize: 13)),
@@ -127,8 +145,7 @@ class SeasonScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading:
-                        const Icon(Icons.play_circle_outline, color: C.blue),
+                    leading: Icon(Icons.play_circle_outline, color: C.blue),
                     title: const Text('Voting opens'),
                     subtitle: Text(fmtDate(start)),
                     onTap: () async {
@@ -138,8 +155,7 @@ class SeasonScreen extends StatelessWidget {
                   ),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading:
-                        const Icon(Icons.stop_circle_outlined, color: C.blue),
+                    leading: Icon(Icons.stop_circle_outlined, color: C.blue),
                     title: const Text('Voting closes'),
                     subtitle: Text(fmtDate(end)),
                     onTap: () async {
@@ -150,8 +166,7 @@ class SeasonScreen extends StatelessWidget {
                   if (error != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 10),
-                      child: Text(error!,
-                          style: TextStyle(color: Colors.red.shade700)),
+                      child: Text(error!, style: TextStyle(color: C.danger)),
                     ),
                 ],
               ),
@@ -171,7 +186,6 @@ class SeasonScreen extends StatelessWidget {
                             'The closing time must be after the opening time.');
                         return;
                       }
-                      // Seasons cannot run at the same time.
                       for (final e in state.elections) {
                         if (start.isBefore(e.endDate) &&
                             end.isAfter(e.startDate)) {
@@ -220,9 +234,18 @@ class SeasonScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final pct = (season.turnout * 100).round();
     return Scaffold(
-      appBar: AppBar(
+      appBar: BrandAppBar(
         title: Text(season.club),
         actions: [
+          IconButton(
+            tooltip: 'Who voted',
+            icon: const Icon(Icons.fact_check_outlined),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => SeasonVotersScreen(
+                    electionId: season.electionId,
+                    club: season.club,
+                    schoolYear: season.schoolYear))),
+          ),
           IconButton(
             tooltip: 'Export results to Excel',
             icon: const Icon(Icons.download),
@@ -251,7 +274,7 @@ class SeasonScreen extends StatelessWidget {
       ),
       body: CenteredBody(
         maxWidth: 800,
-        child: ListView(
+        child: StaggerListView(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
           children: [
             Text('School year ${season.schoolYear}',
@@ -259,10 +282,10 @@ class SeasonScreen extends StatelessWidget {
                     const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: 2),
             Text('${fmtDate(season.startDate)} to ${fmtDate(season.endDate)}',
-                style: const TextStyle(color: C.muted)),
+                style: TextStyle(color: C.muted)),
             const SizedBox(height: 2),
             Text('Open to ${season.audience}',
-                style: const TextStyle(color: C.muted)),
+                style: TextStyle(color: C.muted)),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -277,39 +300,73 @@ class SeasonScreen extends StatelessWidget {
             const Text('Results',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
             const SizedBox(height: 10),
-            for (final w in season.winners)
-              Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
-                decoration: cardBox(),
-                child: Row(
+            FutureBuilder<_Poll>(
+              future: _poll,
+              builder: (context, snap) {
+                if (snap.connectionState != ConnectionState.done) {
+                  return const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                final poll = snap.data;
+                if (poll != null && poll.positions.isNotEmpty) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final p in poll.positions)
+                        PositionPollCard(p, poll.photos),
+                    ],
+                  );
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Icon(Icons.emoji_events, color: Color(0xFFB88700)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(w.position,
-                              style: const TextStyle(
-                                  color: C.muted, fontSize: 12)),
-                          Text(w.name,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w800)),
-                          Text(w.partyList,
-                              style: const TextStyle(
-                                  color: C.muted, fontSize: 13)),
-                        ],
+                    for (final w in season.winners)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(14),
+                        decoration: cardBox(),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.emoji_events,
+                                color: Color(0xFFB88700)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(w.position,
+                                      style: TextStyle(
+                                          color: C.muted, fontSize: 12)),
+                                  Text(w.name,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w800)),
+                                  Text(w.partyList,
+                                      style: TextStyle(
+                                          color: C.muted, fontSize: 13)),
+                                ],
+                              ),
+                            ),
+                            Text('${w.votes} votes',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700)),
+                          ],
+                        ),
                       ),
-                    ),
-                    Text('${w.votes} votes',
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
                   ],
-                ),
-              ),
+                );
+              },
+            ),
           ],
         ),
       ),
     );
   }
+}
+
+class _Poll {
+  final List<PositionTally> positions;
+  final Map<int, String> photos;
+  const _Poll(this.positions, this.photos);
 }

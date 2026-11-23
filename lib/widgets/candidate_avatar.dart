@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/mock.dart';
 
-/// Round candidate photo with an initials fallback.
 class CandidateAvatar extends StatelessWidget {
   final Candidate candidate;
   final double radius;

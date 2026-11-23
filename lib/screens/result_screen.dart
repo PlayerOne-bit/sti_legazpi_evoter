@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../widgets/anim.dart';
+import '../widgets/brand_app_bar.dart';
 import '../data/mock.dart';
 import '../widgets/centered_body.dart';
 import '../theme.dart';
@@ -18,7 +20,7 @@ class _ResultScreenState extends State<ResultScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: BrandAppBar(
         title: const Text('Live tally'),
         actions: [
           IconButton(
@@ -43,11 +45,10 @@ class _ResultScreenState extends State<ResultScreen> {
                 ),
               );
             }
-            return ListView(
+            return StaggerListView(
               padding: const EdgeInsets.all(20),
               children: [
-                Text(state.electionLabel,
-                    style: const TextStyle(color: C.muted)),
+                Text(state.electionLabel, style: TextStyle(color: C.muted)),
                 const SizedBox(height: 16),
                 for (final p in snap.data!) ...[
                   Text(p.title,
@@ -89,7 +90,7 @@ class _Bar extends StatelessWidget {
             Expanded(
                 child: Text(e.name,
                     style: const TextStyle(fontWeight: FontWeight.w600))),
-            Text('${e.votes} votes', style: const TextStyle(color: C.muted)),
+            Text('${e.votes} votes', style: TextStyle(color: C.muted)),
           ]),
           const SizedBox(height: 6),
           ClipRRect(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/anim.dart';
 import '../../data/admin_accounts.dart';
 import '../../data/api.dart';
 import '../../theme.dart';
@@ -14,8 +15,6 @@ class _Field {
       {this.secret = false, this.initial = '', this.keyboard});
 }
 
-/// A small form dialog. [onSubmit] returns an error message, or null when it worked.
-/// Returns true when the form was submitted successfully.
 Future<bool> _formDialog(
   BuildContext context, {
   required String title,
@@ -46,7 +45,7 @@ Future<bool> _formDialog(
                   Padding(
                     padding: const EdgeInsets.only(bottom: 14),
                     child: Text(intro,
-                        style: const TextStyle(color: C.muted, fontSize: 13)),
+                        style: TextStyle(color: C.muted, fontSize: 13)),
                   ),
                 for (final f in fields)
                   Padding(
@@ -59,7 +58,7 @@ Future<bool> _formDialog(
                     ),
                   ),
                 if (error != null)
-                  Text(error!, style: TextStyle(color: Colors.red.shade700)),
+                  Text(error!, style: TextStyle(color: C.danger)),
               ],
             ),
           ),
@@ -109,8 +108,6 @@ Future<String?> _try(Future<void> Function() call) async {
   }
 }
 
-/// Your account (password, and for the super admin the username and two-step
-/// verification) and, for the super admin, the list of administrators.
 class AdminManagerPage extends StatefulWidget {
   const AdminManagerPage({super.key});
 
@@ -158,8 +155,6 @@ class _AdminManagerPageState extends State<AdminManagerPage> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
-
-  // ---------------- my account ----------------
 
   Future<void> _editAccount() async {
     final account = me!;
@@ -248,8 +243,6 @@ class _AdminManagerPageState extends State<AdminManagerPage> {
     }
   }
 
-  // ---------------- administrators ----------------
-
   Future<void> _addAdmin() async {
     final ok = await _formDialog(
       context,
@@ -297,7 +290,7 @@ class _AdminManagerPageState extends State<AdminManagerPage> {
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text('Cancel')),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+            style: FilledButton.styleFrom(backgroundColor: C.danger),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Remove'),
           ),
@@ -309,8 +302,6 @@ class _AdminManagerPageState extends State<AdminManagerPage> {
     _toast(err ?? '${a.username} was removed.');
     if (err == null) _load();
   }
-
-  // ---------------- build ----------------
 
   Widget _chip(String text, Color bg, Color fg) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -348,9 +339,8 @@ class _AdminManagerPageState extends State<AdminManagerPage> {
                               fontSize: 18, fontWeight: FontWeight.w800)),
                       const SizedBox(height: 4),
                       a.isSuper
-                          ? _chip('Super admin', const Color(0xFFFFF3C4),
-                              const Color(0xFF8A6500))
-                          : _chip('Admin', const Color(0xFFE3ECF8), C.blue),
+                          ? _chip('Super admin', C.warnBg, C.warnFg)
+                          : _chip('Admin', C.tint, C.blue),
                     ],
                   ),
                 ),
@@ -378,8 +368,7 @@ class _AdminManagerPageState extends State<AdminManagerPage> {
                             a.twoFactor
                                 ? 'Codes are sent to ${a.email}'
                                 : 'Add an email to get a code every time you sign in.',
-                            style:
-                                const TextStyle(color: C.muted, fontSize: 13)),
+                            style: TextStyle(color: C.muted, fontSize: 13)),
                       ],
                     ),
                   ),
@@ -411,10 +400,9 @@ class _AdminManagerPageState extends State<AdminManagerPage> {
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: const Color(0xFFE3ECF8),
+            backgroundColor: C.tint,
             child: Text(a.username.characters.first.toUpperCase(),
-                style: const TextStyle(
-                    color: C.blue, fontWeight: FontWeight.w800)),
+                style: TextStyle(color: C.blue, fontWeight: FontWeight.w800)),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -429,7 +417,7 @@ class _AdminManagerPageState extends State<AdminManagerPage> {
                     a.isSuper
                         ? 'Super admin${a.twoFactor ? ', two-step on' : ''}'
                         : 'Admin',
-                    style: const TextStyle(color: C.muted, fontSize: 13)),
+                    style: TextStyle(color: C.muted, fontSize: 13)),
               ],
             ),
           ),
@@ -472,7 +460,7 @@ class _AdminManagerPageState extends State<AdminManagerPage> {
         ),
       );
     }
-    return ListView(
+    return StaggerListView(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
       children: [
         _accountCard(account),

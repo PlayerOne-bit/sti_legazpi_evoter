@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../widgets/anim.dart';
+import '../../widgets/brand_app_bar.dart';
 import '../../data/mock.dart';
 import '../../theme.dart';
 import '../../widgets/blue_button.dart';
@@ -10,7 +12,6 @@ import '../result_screen.dart';
 import 'vote_screen.dart';
 import '../../widgets/loading_view.dart';
 
-/// "ACOSTA,ANGELINA KATE MILLENA" -> "Angelina". Also handles "Angelina Acosta".
 String _firstName(String full) {
   final t = full.trim();
   final comma = t.indexOf(',');
@@ -49,12 +50,17 @@ class _ClientHomeState extends State<ClientHome> {
       builder: (context, _) {
         if (!state.homeLoaded) {
           return Scaffold(
-            appBar: AppBar(actions: [
-              IconButton(
-                  tooltip: 'Sign out',
-                  icon: const Icon(Icons.logout),
-                  onPressed: () => _signOut(context)),
-            ]),
+            appBar: BrandAppBar(
+              title: const Text('STI Legazpi eVoter'),
+              showLogo: true,
+              themeToggle: true,
+              actions: [
+                IconButton(
+                    tooltip: 'Sign out',
+                    icon: const Icon(Icons.logout),
+                    onPressed: () => _signOut(context)),
+              ],
+            ),
             body: LoadingView(error: state.homeError, onRetry: state.loadHome),
           );
         }
@@ -68,15 +74,16 @@ class _ClientHomeState extends State<ClientHome> {
             openForOthers == null &&
             !waitingTally &&
             next == null;
-        // Candidates are only worth showing while a season is in progress or still to come.
         final showCandidates =
             (active != null || openForOthers != null || next != null) &&
                 state.positions.isNotEmpty;
 
         return Scaffold(
-          appBar: AppBar(
-            title: Text('Hi, $first',
-                style: const TextStyle(fontWeight: FontWeight.w800)),
+          appBar: BrandAppBar(
+            title: Text('Hi, $first'),
+            subtitle: 'STI Legazpi eVoter',
+            showLogo: true,
+            themeToggle: true,
             actions: [
               IconButton(
                   tooltip: 'Refresh',
@@ -92,20 +99,18 @@ class _ClientHomeState extends State<ClientHome> {
             maxWidth: 1000,
             child: RefreshIndicator(
               onRefresh: state.loadHome,
-              child: ListView(
+              child: StaggerListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
                 children: [
                   if (me != null) _ProfileStrip(student: me),
                   const SizedBox(height: 18),
-
-                  // 1. The ongoing season (counts down to when voting closes)
                   if (active != null) ...[
                     _SectionHeader(
                       title: '${active.club} election',
                       subtitle: 'School year ${active.schoolYear}',
                       chipLabel: 'Voting open',
-                      chipBg: const Color(0xFFE7F5EE),
+                      chipBg: C.okBg,
                       chipFg: C.ok,
                     ),
                     const SizedBox(height: 12),
@@ -120,12 +125,11 @@ class _ClientHomeState extends State<ClientHome> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: cardBox(
-                            color: const Color(0xFFE7F5EE),
-                            border: const Color(0xFFB9E2CD)),
+                            color: C.okBg, border: const Color(0xFFB9E2CD)),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const Row(children: [
+                            Row(children: [
                               Icon(Icons.check_circle, color: C.ok),
                               SizedBox(width: 10),
                               Expanded(
@@ -175,15 +179,13 @@ class _ClientHomeState extends State<ClientHome> {
                       body:
                           'Check back later. The admin will announce the next voting season.',
                     ),
-
-                  // 2. The next season (always shown when there is one, even during a vote)
                   if (next != null) ...[
                     SizedBox(height: active != null ? 24 : 16),
                     _SectionHeader(
                       title: '${next.club} election',
                       subtitle: 'School year ${next.schoolYear}',
                       chipLabel: 'Upcoming',
-                      chipBg: const Color(0xFFE3ECF8),
+                      chipBg: C.tint,
                       chipFg: C.blue,
                     ),
                     const SizedBox(height: 12),
@@ -197,15 +199,13 @@ class _ClientHomeState extends State<ClientHome> {
                       onFinished: state.refreshSoon,
                     ),
                   ],
-
-                  // 3. Candidates (hidden when no season is pending or in progress)
                   if (showCandidates) ...[
                     const SizedBox(height: 32),
                     const Text('Meet the candidates',
                         style: TextStyle(
                             fontSize: 22, fontWeight: FontWeight.w800)),
                     const SizedBox(height: 4),
-                    const Text('Tap a card to read their vision.',
+                    Text('Tap a card to read their vision.',
                         style: TextStyle(color: C.muted)),
                     const SizedBox(height: 16),
                     for (final p in state.positions)
@@ -221,7 +221,6 @@ class _ClientHomeState extends State<ClientHome> {
   }
 }
 
-/// Who is signed in: avatar, grade level, student number.
 class _ProfileStrip extends StatelessWidget {
   final Student student;
   const _ProfileStrip({required this.student});
@@ -248,7 +247,7 @@ class _ProfileStrip extends StatelessWidget {
                 Text(state.gradeName(student.gradeLevelId),
                     style: const TextStyle(fontWeight: FontWeight.w700)),
                 Text('Student number ${student.studentNum}',
-                    style: const TextStyle(color: C.muted, fontSize: 13)),
+                    style: TextStyle(color: C.muted, fontSize: 13)),
               ],
             ),
           ),
@@ -283,7 +282,7 @@ class _SectionHeader extends StatelessWidget {
               Text(title,
                   style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.w800)),
-              Text(subtitle, style: const TextStyle(color: C.muted)),
+              Text(subtitle, style: TextStyle(color: C.muted)),
             ],
           ),
         ),
@@ -300,7 +299,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-/// One position and its candidate cards.
 class _PositionSection extends StatelessWidget {
   final Position position;
   const _PositionSection({required this.position});
@@ -322,10 +320,9 @@ class _PositionSection extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                    color: const Color(0xFFE3ECF8),
-                    borderRadius: BorderRadius.circular(20)),
+                    color: C.tint, borderRadius: BorderRadius.circular(20)),
                 child: Text('${list.length}',
-                    style: const TextStyle(
+                    style: TextStyle(
                         color: C.blue,
                         fontSize: 12,
                         fontWeight: FontWeight.w700)),
@@ -334,7 +331,7 @@ class _PositionSection extends StatelessWidget {
           ),
         ),
         if (list.isEmpty)
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(bottom: 12),
             child: Text('No candidates yet.', style: TextStyle(color: C.muted)),
           )
@@ -378,8 +375,7 @@ class _Notice extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-                color: const Color(0xFFF1F3F7),
-                borderRadius: BorderRadius.circular(12)),
+                color: C.surface2, borderRadius: BorderRadius.circular(12)),
             child: Icon(icon, color: C.muted),
           ),
           const SizedBox(width: 14),
@@ -391,7 +387,7 @@ class _Notice extends StatelessWidget {
                     style: const TextStyle(
                         fontWeight: FontWeight.w800, fontSize: 16)),
                 const SizedBox(height: 2),
-                Text(body, style: const TextStyle(color: C.muted)),
+                Text(body, style: TextStyle(color: C.muted)),
               ],
             ),
           ),

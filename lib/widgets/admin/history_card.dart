@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../widgets/anim.dart';
 import '../../data/mock.dart';
 import '../../theme.dart';
 
-/// A finished voting season: club, school year, dates, turnout.
 class HistoryCard extends StatelessWidget {
   final Season season;
   final VoidCallback? onTap;
@@ -11,7 +11,8 @@ class HistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pct = (season.turnout * 100).round();
-    return Padding(
+    return HoverLift(
+        child: Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -24,36 +25,43 @@ class HistoryCard extends StatelessWidget {
               Container(
                 width: 44,
                 height: 44,
-                decoration: BoxDecoration(color: const Color(0xFFE3ECF8), borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.event_available, color: C.blue),
+                decoration: BoxDecoration(
+                    color: C.tint, borderRadius: BorderRadius.circular(12)),
+                child: Icon(Icons.event_available, color: C.blue),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(season.club, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                    Text('School year ${season.schoolYear}', style: const TextStyle(fontSize: 13)),
+                    Text(season.club,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w800, fontSize: 16)),
+                    Text('School year ${season.schoolYear}',
+                        style: const TextStyle(fontSize: 13)),
                     const SizedBox(height: 2),
-                    Text('${fmtDay(season.startDate)} to ${fmtDay(season.endDate)}',
-                        style: const TextStyle(color: C.muted, fontSize: 12)),
+                    Text(
+                        '${fmtDay(season.startDate)} to ${fmtDay(season.endDate)}',
+                        style: TextStyle(color: C.muted, fontSize: 12)),
                   ],
                 ),
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('$pct%', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                  Text('$pct%',
+                      style: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.w800)),
                   Text('${season.votedCount} of ${season.totalVoters}',
-                      style: const TextStyle(color: C.muted, fontSize: 12)),
+                      style: TextStyle(color: C.muted, fontSize: 12)),
                 ],
               ),
               const SizedBox(width: 4),
-              const Icon(Icons.chevron_right, color: C.muted),
+              Icon(Icons.chevron_right, color: C.muted),
             ],
           ),
         ),
       ),
-    );
+    ));
   }
 }

@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../data/api.dart';
 
-/// Live countdown to [end]. Used by students ("Voting closes in") and
-/// by admins ("Next voting season starts in").
 class DoomsdayTimer extends StatefulWidget {
   final DateTime end;
   final String label;
@@ -59,8 +57,16 @@ class _DoomsdayTimerState extends State<DoomsdayTimer> {
     String two(int n) => n.toString().padLeft(2, '0');
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-      decoration:
-          BoxDecoration(color: C.navy, borderRadius: BorderRadius.circular(18)),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+            colors: [C.blue, C.blueDeep],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(color: C.shadow, blurRadius: 14, offset: const Offset(0, 6))
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

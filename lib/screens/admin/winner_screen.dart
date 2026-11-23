@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../widgets/anim.dart';
+import '../../widgets/brand_app_bar.dart';
 import '../../data/excel_io.dart';
 import '../../data/mock.dart';
 import '../../widgets/blue_button.dart';
 import '../../widgets/centered_body.dart';
+import '../../widgets/admin/poll_results.dart';
 import '../../theme.dart';
 
 class WinnerScreen extends StatefulWidget {
@@ -14,10 +17,19 @@ class WinnerScreen extends StatefulWidget {
 }
 
 class _WinnerScreenState extends State<WinnerScreen> {
-  late final Future<List<PositionTally>> _tally =
-      state.fetchAdminTally(widget.election.id);
+  late final Future<_Results> _results = _load();
   bool _busy = false;
   bool _exporting = false;
+
+  Future<_Results> _load() async {
+    final id = widget.election.id;
+    final tally = await state.fetchAdminTally(id);
+    var photos = <int, String>{};
+    try {
+      photos = await state.fetchCandidatePhotos(id);
+    } catch (_) {}
+    return _Results(tally, photos);
+  }
 
   Future<void> _close() async {
     setState(() => _busy = true);
@@ -43,24 +55,33 @@ class _WinnerScreenState extends State<WinnerScreen> {
   Widget build(BuildContext context) {
     final e = widget.election;
     return Scaffold(
-      appBar: AppBar(title: const Text('Winners')),
+      appBar: BrandAppBar(title: const Text('Election Results')),
       body: CenteredBody(
         maxWidth: 800,
-        child: FutureBuilder<List<PositionTally>>(
-          future: _tally,
+        child: FutureBuilder<_Results>(
+          future: _results,
           builder: (context, snap) {
             if (snap.connectionState != ConnectionState.done) {
               return const Center(child: CircularProgressIndicator());
             }
             if (snap.hasError) return Center(child: Text('${snap.error}'));
-            return ListView(
+            final r = snap.data!;
+            final positions =
+                r.tally.where((p) => p.entries.isNotEmpty).toList();
+            return StaggerListView(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
               children: [
-                Text('${e.club}, ${e.schoolYear}',
-                    style: const TextStyle(color: C.muted)),
-                const SizedBox(height: 16),
-                for (final p in snap.data!)
-                  if (p.entries.isNotEmpty) _WinnerTile(p),
+                _Header(club: e.club, schoolYear: e.schoolYear),
+                const SizedBox(height: 20),
+                if (positions.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: cardBox(),
+                    child: Text('No positions or candidates to show.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: C.muted)),
+                  ),
+                for (final p in positions) PositionPollCard(p, r.photos),
               ],
             );
           },
@@ -97,79 +118,64 @@ class _WinnerScreenState extends State<WinnerScreen> {
   }
 }
 
-class _WinnerTile extends StatelessWidget {
-  final PositionTally p;
-  const _WinnerTile(this.p);
+class _Results {
+  final List<PositionTally> tally;
+  final Map<int, String> photos;
+  const _Results(this.tally, this.photos);
+}
+
+class _Header extends StatelessWidget {
+  final String club;
+  final String schoolYear;
+  const _Header({required this.club, required this.schoolYear});
 
   @override
   Widget build(BuildContext context) {
-    final ws = p.winners;
-    if (ws.isEmpty) {
-      return Container(
-        width: double.infinity,
-        margin: const EdgeInsets.only(bottom: 14),
-        padding: const EdgeInsets.all(18),
-        decoration: cardBox(),
-        child: Text('${p.title}: no votes were cast.',
-            style: const TextStyle(color: C.muted)),
-      );
-    }
-    return Column(
-      children: [
-        for (final w in ws)
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [C.blue, C.blueDeep],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
           Container(
-            margin: const EdgeInsets.only(bottom: 14),
-            padding: const EdgeInsets.all(18),
+            width: 52,
+            height: 52,
             decoration: BoxDecoration(
-                color: C.navy, borderRadius: BorderRadius.circular(18)),
-            child: Row(
+              color: C.yellow.withValues(alpha: 0.18),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.emoji_events, color: C.yellow, size: 30),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 32,
-                  backgroundColor: w.color,
-                  child: Text(w.initials,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800)),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(ws.length > 1 ? '${p.title} (tie)' : p.title,
-                          style: const TextStyle(
-                              color: C.yellow, fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 2),
-                      Text(w.name,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 19,
-                              fontWeight: FontWeight.w800)),
-                      Text(w.partyList,
-                          style: const TextStyle(color: Colors.white60)),
-                    ],
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text('${w.votes}',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 26,
-                            fontWeight: FontWeight.w800)),
-                    Text(
-                        '${p.total == 0 ? 0 : (w.votes * 100 / p.total).round()}% of votes',
-                        style: const TextStyle(
-                            color: Colors.white60, fontSize: 12)),
-                  ],
-                ),
+                const Text('Official Results',
+                    style: TextStyle(
+                        color: C.yellow,
+                        fontSize: 12,
+                        letterSpacing: 1.2,
+                        fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text(club,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800)),
+                Text('School Year $schoolYear',
+                    style: const TextStyle(color: Colors.white70)),
               ],
             ),
           ),
-      ],
+        ],
+      ),
     );
   }
 }
