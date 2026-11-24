@@ -1,1 +1,1 @@
-window.EVOTER_API = "https://YOUR_DOMAIN";
+window.EVOTER_API = "https://sti-evoter-api.onrender.com";
