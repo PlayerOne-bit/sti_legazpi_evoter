@@ -60,6 +60,22 @@ if (-not $SkipWindows) {
         $src = Join-Path $env:WINDIR "System32\$dll"
         if (Test-Path $src) { Copy-Item $src $release -Force }
     }
+
+    # A debug run of the app while this builds can leave the debug engine in the Release folder,
+    # and then the app closes at once. Check the engine is the release one.
+    $flutterRoot = Split-Path -Parent (Split-Path -Parent (Get-Command flutter).Source)
+    $engine = Join-Path $flutterRoot "bin\cache\artifacts\engine\windows-x64-release\flutter_windows.dll"
+    if ((Test-Path $engine) -and
+        (Get-FileHash $engine).Hash -ne (Get-FileHash (Join-Path $release "flutter_windows.dll")).Hash) {
+        throw "The Windows build has the debug Flutter engine. Stop any running debug session of the app, then run this script again."
+    }
+
+    # Start the app once to make sure it opens.
+    $proc = Start-Process (Join-Path $release "sti_legazpi_evoter.exe") -PassThru
+    Start-Sleep -Seconds 8
+    if ($proc.HasExited) { throw "The Windows app closed right after starting (exit code $($proc.ExitCode))." }
+    Stop-Process -Id $proc.Id -Force
+    Start-Sleep -Seconds 1
     $zip = Join-Path $dist "STI-eVoter-$name-windows.zip"
     if (Test-Path $zip) { Remove-Item $zip -Force }
     Compress-Archive -Path "$release\*" -DestinationPath $zip
