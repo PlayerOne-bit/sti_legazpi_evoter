@@ -5,6 +5,7 @@ import '../../data/api.dart';
 import '../../data/excel_io.dart';
 import '../../data/mock.dart';
 import '../../widgets/admin/poll_results.dart';
+import '../../widgets/admin/season_range_picker.dart';
 import 'season_voters_screen.dart';
 import '../../widgets/centered_body.dart';
 import '../../theme.dart';
@@ -102,20 +103,6 @@ class _SeasonScreenState extends State<SeasonScreen> {
     bool saving = false;
     bool created = false;
 
-    Future<DateTime?> pick(BuildContext ctx, DateTime init) async {
-      final d = await showDatePicker(
-        context: ctx,
-        initialDate: init,
-        firstDate: DateTime(2024),
-        lastDate: DateTime(2035),
-      );
-      if (d == null || !ctx.mounted) return null;
-      final t = await showTimePicker(
-          context: ctx, initialTime: TimeOfDay.fromDateTime(init));
-      if (t == null) return null;
-      return DateTime(d.year, d.month, d.day, t.hour, t.minute);
-    }
-
     await showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -143,24 +130,19 @@ class _SeasonScreenState extends State<SeasonScreen> {
                     onChanged: (v) => setS(() => year = v!),
                   ),
                   const SizedBox(height: 8),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.play_circle_outline, color: C.blue),
-                    title: const Text('Voting opens'),
-                    subtitle: Text(fmtDate(start)),
+                  SeasonDatesTile(
+                    start: start,
+                    end: end,
                     onTap: () async {
-                      final v = await pick(ctx, start);
-                      if (v != null) setS(() => start = v);
-                    },
-                  ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.stop_circle_outlined, color: C.blue),
-                    title: const Text('Voting closes'),
-                    subtitle: Text(fmtDate(end)),
-                    onTap: () async {
-                      final v = await pick(ctx, end);
-                      if (v != null) setS(() => end = v);
+                      final r = await showSeasonRangePicker(ctx,
+                          start: start, end: end, others: state.elections);
+                      if (r != null) {
+                        setS(() {
+                          start = r.start;
+                          end = r.end;
+                          error = null;
+                        });
+                      }
                     },
                   ),
                   if (error != null)

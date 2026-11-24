@@ -4,6 +4,7 @@ import '../data/app_update.dart';
 import '../data/mock.dart';
 import '../theme.dart';
 import '../widgets/blue_button.dart';
+import '../widgets/season_preview.dart';
 import '../widgets/update_dialog.dart';
 import 'admin/admin_shell.dart';
 import 'client/home.dart';
@@ -411,9 +412,21 @@ class _AuthPageState extends State<AuthPage> {
                   end: Alignment.bottomRight,
                 ),
               ),
-              padding: const EdgeInsets.all(48),
               alignment: Alignment.centerLeft,
-              child: _brand(large: c.maxWidth >= 1000),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(48, 48, 48, 56),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _brand(large: c.maxWidth >= 1000),
+                    const SizedBox(height: 36),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 480),
+                      child: const SeasonPreview(onBlue: true),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
           Expanded(
@@ -448,8 +461,11 @@ class _AuthPageState extends State<AuthPage> {
           padding: const EdgeInsets.fromLTRB(24, 72, 24, 36),
           child: _brand(),
         ),
-        Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 40), child: form),
+        Padding(padding: const EdgeInsets.fromLTRB(24, 24, 24, 8), child: form),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(24, 16, 24, 44),
+          child: SeasonPreview(onBlue: false),
+        ),
       ],
     );
   }
