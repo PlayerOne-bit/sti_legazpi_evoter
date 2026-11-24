@@ -1,7 +1,7 @@
 name: sti_evoter
 description: STI eVoter - student election app (UI prototype with mock data).
 publish_to: none
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -24,7 +24,17 @@ dev_dependencies:
   flutter_launcher_icons: "^0.14.4"
 
 flutter_launcher_icons:
-  android: "launcher_icon"
-  ios: true
   image_path: "assets/logo.jpg"
+  android: true
   min_sdk_android: 21
+  ios: true
+  remove_alpha_ios: true
+  windows:
+    generate: true
+    image_path: "assets/logo.jpg"
+    icon_size: 256
+  web:
+    generate: true
+    image_path: "assets/logo.jpg"
+    background_color: "#FFE500"
+    theme_color: "#1E5AA8"
