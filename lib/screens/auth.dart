@@ -34,12 +34,27 @@ class _AuthPageState extends State<AuthPage> {
 
   AppUpdateInfo? _update;
   String _version = '';
+  String _installed = '';
 
   @override
   void initState() {
     super.initState();
+    AppUpdater.current().then((info) {
+      if (mounted) setState(() => _installed = info.version);
+    }).catchError((_) {});
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkUpdate());
   }
+
+  Widget _versionLabel(bool onBlue) => IgnorePointer(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+            child: Text('Version $_installed',
+                style: TextStyle(
+                    fontSize: 12, color: onBlue ? Colors.white70 : C.muted)),
+          ),
+        ),
+      );
 
   Future<void> _checkUpdate() async {
     final update = await AppUpdater.check();
@@ -371,61 +386,71 @@ class _AuthPageState extends State<AuthPage> {
         ),
       ),
       body: LayoutBuilder(
-        builder: (context, c) {
-          if (c.maxWidth >= 720) {
-            return Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [C.blue, C.dark ? C.navy : C.blueDeep],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    padding: const EdgeInsets.all(48),
-                    alignment: Alignment.centerLeft,
-                    child: _brand(large: c.maxWidth >= 1000),
-                  ),
-                ),
-                Expanded(
-                  child: Center(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(32),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 440),
-                        child: Container(
-                          padding: const EdgeInsets.all(28),
-                          decoration: cardBox(),
-                          child: form,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          }
-          return ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [C.blue, C.dark ? C.navy : C.blueDeep],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                padding: const EdgeInsets.fromLTRB(24, 72, 24, 36),
-                child: _brand(),
-              ),
-              Padding(padding: const EdgeInsets.all(24), child: form),
-            ],
-          );
-        },
+        builder: (context, c) => Stack(
+          children: [
+            Positioned.fill(child: _layout(c, form)),
+            if (_installed.isNotEmpty)
+              Positioned(
+                  left: 0, bottom: 0, child: _versionLabel(c.maxWidth >= 720)),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _layout(BoxConstraints c, Widget form) {
+    if (c.maxWidth >= 720) {
+      return Row(
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [C.blue, C.dark ? C.navy : C.blueDeep],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              padding: const EdgeInsets.all(48),
+              alignment: Alignment.centerLeft,
+              child: _brand(large: c.maxWidth >= 1000),
+            ),
+          ),
+          Expanded(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(32),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 440),
+                  child: Container(
+                    padding: const EdgeInsets.all(28),
+                    decoration: cardBox(),
+                    child: form,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [C.blue, C.dark ? C.navy : C.blueDeep],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 72, 24, 36),
+          child: _brand(),
+        ),
+        Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 40), child: form),
+      ],
     );
   }
 }

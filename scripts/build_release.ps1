@@ -101,4 +101,6 @@ if ($GitHubRelease) {
 } else {
     Write-Host "To publish: copy the dist files to the server's deploy/downloads folder (DEPLOY.md), or run again with -GitHubRelease (DEPLOY-RENDER.md)."
 }
-Write-Host "Before the next release, raise the build number in pubspec.yaml (for example 1.0.1+2)."
+$parts = $name -split "\."
+$parts[-1] = [int]$parts[-1] + 1
+Write-Host "Before the next release, raise the version in pubspec.yaml (for example $($parts -join '.')+$($build + 1))."
