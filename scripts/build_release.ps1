@@ -99,7 +99,7 @@ if ($GitHubRelease) {
     if ($LASTEXITCODE -ne 0) { throw "gh release create failed. If v$name already exists, raise the version in pubspec.yaml." }
     Write-Host "Published GitHub release v$name. The server picks it up within 5 minutes."
 } else {
-    Write-Host "To publish: copy the dist files to the server's deploy/downloads folder (DEPLOY.md), or run again with -GitHubRelease (DEPLOY-RENDER.md)."
+    Write-Host "Built only. To publish, run again with -GitHubRelease."
 }
 $parts = $name -split "\."
 $parts[-1] = [int]$parts[-1] + 1

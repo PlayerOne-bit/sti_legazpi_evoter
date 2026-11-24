@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="styles.css">
   <script src="config.js"></script>
   <script src="app.js" defer></script>
+  <script src="history.js" defer></script>
 </head>
 <body>
   <header class="hero">
@@ -30,7 +31,7 @@
   <main class="wrap">
     <section class="intro reveal">
       <h2>Get the app</h2>
-      <p>Sign in with your student number and the season password your adviser gives you. The app updates itself when a new version comes out.</p>
+      <p>Sign in with your student number and the season password emailed to your school address (or given by your adviser). The app updates itself when a new version comes out.</p>
       <p class="status" id="status" role="status">Checking the latest version...</p>
     </section>
 
@@ -89,6 +90,12 @@
     <section class="notes reveal" id="notes" hidden>
       <h2>What's new</h2>
       <p id="notes-text"></p>
+    </section>
+
+    <section class="history reveal" aria-labelledby="history-heading">
+      <h2 id="history-heading">Version history</h2>
+      <p class="history-lead">Small fixes are grouped with the version they came with.</p>
+      <div id="history-list"></div>
     </section>
   </main>
 
