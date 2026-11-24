@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../data/api.dart';
@@ -33,11 +35,236 @@ class _SeasonVotersScreenState extends State<SeasonVotersScreen> {
   String _q = '';
   final Set<int> _revealed = {};
   final Map<int, String> _newPasswords = {};
+  final Set<int> _sending = {};
+  MailJob? _job;
+  Timer? _poll;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _checkJob();
+  }
+
+  @override
+  void dispose() {
+    _poll?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkJob() async {
+    try {
+      final j = await state.emailAllStatus(widget.electionId);
+      if (!mounted || (j.total == 0 && !j.running)) return;
+      setState(() => _job = j);
+      if (j.running) _startPolling();
+    } on ApiException {
+      return;
+    }
+  }
+
+  void _startPolling() {
+    _poll?.cancel();
+    _poll = Timer.periodic(const Duration(seconds: 2), (_) async {
+      try {
+        final j = await state.emailAllStatus(widget.electionId);
+        if (!mounted) return;
+        setState(() => _job = j);
+        if (!j.running) {
+          _poll?.cancel();
+          _load();
+        }
+      } on ApiException {
+        return;
+      }
+    });
+  }
+
+  Future<void> _emailOne(SeasonVoter v) async {
+    if (v.email == null) {
+      _toast('No school email for ${v.studentNum}. '
+          'The student number must look like 02000XXXXXX or 2000XXXXXX.');
+      return;
+    }
+    if (v.passwordSentAt != null) {
+      final again = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text('Email ${v.fullName} again?'),
+          content: Text('The password was already sent to ${v.email} on '
+              '${fmtDate(v.passwordSentAt!.toLocal())}.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel')),
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Send again')),
+          ],
+        ),
+      );
+      if (again != true) return;
+    }
+    setState(() => _sending.add(v.studentId));
+    try {
+      final to =
+          await state.emailSeasonPassword(widget.electionId, v.studentId);
+      if (!mounted) return;
+      _toast('Password sent to $to');
+      await _load();
+    } on ApiException catch (e) {
+      _toast(e.message);
+    } finally {
+      if (mounted) setState(() => _sending.remove(v.studentId));
+    }
+  }
+
+  Future<void> _emailAll(SeasonVoters d) async {
+    final pending = d.items.where((v) => v.isActive && !v.hasVoted).toList();
+    final unsent = pending.where((v) => v.passwordSentAt == null).length;
+    final noEmail = pending.where((v) => v.email == null).length;
+    var onlyUnsent = true;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) {
+          Widget option(bool value, String title, String subtitle) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                    onlyUnsent == value
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                    color: onlyUnsent == value ? C.blue : C.muted),
+                title: Text(title,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: Text(subtitle),
+                onTap: () => setLocal(() => onlyUnsent = value),
+              );
+          final skipNote = noEmail == 1
+              ? '1 student has no school email'
+              : '$noEmail students have no school email';
+          return AlertDialog(
+            title: const Text('Email season passwords'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                      'Each student gets their password at '
+                      'lastname.XXXXXX@legazpi.sti.edu.ph.',
+                      style: TextStyle(color: C.muted)),
+                  const SizedBox(height: 8),
+                  option(true, 'Not emailed yet ($unsent)',
+                      'Skips students who already got this password.'),
+                  option(
+                      false,
+                      'Everyone who has not voted (${pending.length})',
+                      'Sends again to students who were already emailed.'),
+                  if (noEmail > 0) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                        '$skipNote (number is not 02000XXXXXX or 2000XXXXXX). '
+                        'They will be skipped.',
+                        style: TextStyle(color: C.danger, fontSize: 13)),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel')),
+              FilledButton.icon(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  icon: const Icon(Icons.send_rounded, size: 18),
+                  label: const Text('Send')),
+            ],
+          );
+        },
+      ),
+    );
+    if (ok != true) return;
+    try {
+      final job = await state.emailAllSeasonPasswords(widget.electionId,
+          onlyUnsent: onlyUnsent);
+      if (!mounted) return;
+      setState(() => _job = job);
+      _startPolling();
+    } on ApiException catch (e) {
+      _toast(e.message);
+    }
+  }
+
+  Widget _jobCard(MailJob j) {
+    final ratio = j.total == 0 ? 1.0 : j.done / j.total;
+    final title = j.running
+        ? 'Sending passwords... ${j.done} of ${j.total}'
+        : j.total == 0
+            ? 'Nobody to email.'
+            : 'Emailed ${j.sent} of ${j.total} students';
+    final extra = [
+      if (j.skipped > 0) '${j.skipped} skipped (no school email)',
+      if (j.failed > 0) '${j.failed} failed',
+    ].join('  ·  ');
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 10, 6, 12),
+      decoration: cardBox(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                  j.running
+                      ? Icons.outgoing_mail
+                      : j.failed > 0
+                          ? Icons.error_outline
+                          : Icons.mark_email_read_outlined,
+                  color: j.running
+                      ? C.blue
+                      : j.failed > 0
+                          ? C.danger
+                          : C.ok),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: Text(title,
+                      style: const TextStyle(fontWeight: FontWeight.w700))),
+              if (!j.running)
+                IconButton(
+                  tooltip: 'Dismiss',
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.close, size: 18),
+                  onPressed: () => setState(() => _job = null),
+                )
+              else
+                const SizedBox(height: 40),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 8, top: 4),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: ratio,
+                minHeight: 6,
+                color: j.failed > 0 && !j.running ? C.danger : C.blue,
+                backgroundColor: C.tint,
+              ),
+            ),
+          ),
+          if (extra.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(extra, style: TextStyle(color: C.muted, fontSize: 12.5)),
+          ],
+          if (j.lastError != null) ...[
+            const SizedBox(height: 4),
+            Text(j.lastError!,
+                style: TextStyle(color: C.danger, fontSize: 12.5)),
+          ],
+        ],
+      ),
+    );
   }
 
   Future<void> _load() async {
@@ -220,7 +447,7 @@ class _SeasonVotersScreenState extends State<SeasonVotersScreen> {
     );
   }
 
-  Widget _tile(SeasonVoter v, bool closed) {
+  Widget _tile(SeasonVoter v, bool closed, bool emailReady) {
     final pw = _newPasswords[v.studentId] ?? v.password;
     final shown = _revealed.contains(v.studentId);
     final details = [
@@ -266,6 +493,39 @@ class _SeasonVotersScreenState extends State<SeasonVotersScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: C.muted, fontSize: 12.5)),
+                if (!closed)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Row(
+                      children: [
+                        Icon(
+                            v.passwordSentAt != null
+                                ? Icons.mark_email_read_outlined
+                                : Icons.mail_outline,
+                            size: 14,
+                            color: v.email == null
+                                ? C.danger
+                                : v.passwordSentAt != null
+                                    ? C.ok
+                                    : C.muted),
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: Text(
+                            v.email == null
+                                ? 'No school email. Check the student number.'
+                                : v.passwordSentAt != null
+                                    ? '${v.email}  ·  sent ${fmtDate(v.passwordSentAt!.toLocal())}'
+                                    : v.email!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                color: v.email == null ? C.danger : C.muted,
+                                fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 if (!closed && pw != null) ...[
                   const SizedBox(height: 6),
                   Row(
@@ -306,6 +566,26 @@ class _SeasonVotersScreenState extends State<SeasonVotersScreen> {
                           if (mounted) _toast('Password copied.');
                         },
                       ),
+                      if (emailReady && v.email != null)
+                        _sending.contains(v.studentId)
+                            ? const Padding(
+                                padding: EdgeInsets.all(10),
+                                child: SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2)),
+                              )
+                            : IconButton(
+                                visualDensity: VisualDensity.compact,
+                                tooltip: v.passwordSentAt != null
+                                    ? 'Email password again'
+                                    : 'Email password to ${v.email}',
+                                iconSize: 18,
+                                color: v.passwordSentAt != null ? C.ok : C.blue,
+                                icon: const Icon(Icons.send_rounded),
+                                onPressed: () => _emailOne(v),
+                              ),
                     ],
                   ),
                 ],
@@ -329,9 +609,20 @@ class _SeasonVotersScreenState extends State<SeasonVotersScreen> {
           if (!closed)
             PopupMenuButton<String>(
               tooltip: 'Options',
-              onSelected: (_) => _reset(v),
-              itemBuilder: (_) => const [
-                PopupMenuItem(
+              onSelected: (value) =>
+                  value == 'email' ? _emailOne(v) : _reset(v),
+              itemBuilder: (_) => [
+                if (emailReady)
+                  PopupMenuItem(
+                    value: 'email',
+                    enabled: v.email != null,
+                    child: const ListTile(
+                      dense: true,
+                      leading: Icon(Icons.send_rounded),
+                      title: Text('Email password'),
+                    ),
+                  ),
+                const PopupMenuItem(
                   value: 'reset',
                   child: ListTile(
                     dense: true,
@@ -432,6 +723,39 @@ class _SeasonVotersScreenState extends State<SeasonVotersScreen> {
                             ),
                           ),
                         ),
+                        if (!d.closed) ...[
+                          const SizedBox(height: 10),
+                          FadeSlideIn(
+                            index: 1,
+                            child: Pressable(
+                              child: FilledButton.icon(
+                                style: FilledButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(50),
+                                ),
+                                onPressed:
+                                    !d.emailReady || (_job?.running ?? false)
+                                        ? null
+                                        : () => _emailAll(d),
+                                icon: const Icon(Icons.forward_to_inbox),
+                                label:
+                                    const Text('Send all passwords by email'),
+                              ),
+                            ),
+                          ),
+                          if (!d.emailReady)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                  'Email is not set up on the server yet (Smtp settings).',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                      color: C.muted, fontSize: 12.5)),
+                            ),
+                        ],
+                        if (_job != null) ...[
+                          const SizedBox(height: 12),
+                          FadeSlideIn(child: _jobCard(_job!)),
+                        ],
                         const SizedBox(height: 16),
                         FadeSlideIn(index: 1, child: _filters(d)),
                         const SizedBox(height: 14),
@@ -449,7 +773,8 @@ class _SeasonVotersScreenState extends State<SeasonVotersScreen> {
                           ),
                         for (var i = 0; i < list.length; i++)
                           FadeSlideIn(
-                              index: i + 2, child: _tile(list[i], d.closed)),
+                              index: i + 2,
+                              child: _tile(list[i], d.closed, d.emailReady)),
                       ],
                     ),
                   ),

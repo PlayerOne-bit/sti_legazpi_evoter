@@ -108,6 +108,8 @@ class SeasonVoter {
   final String? password;
   final bool hasVoted;
   final DateTime? votedAt;
+  final String? email;
+  final DateTime? passwordSentAt;
   const SeasonVoter(
       this.studentId,
       this.studentNum,
@@ -119,7 +121,9 @@ class SeasonVoter {
       this.isActive,
       this.password,
       this.hasVoted,
-      this.votedAt);
+      this.votedAt,
+      [this.email,
+      this.passwordSentAt]);
   String get initials => personInitials(fullName);
 }
 
@@ -128,8 +132,32 @@ class SeasonVoters {
   final int total;
   final int voted;
   final List<SeasonVoter> items;
-  const SeasonVoters(this.status, this.total, this.voted, this.items);
+  final bool emailReady;
+  const SeasonVoters(this.status, this.total, this.voted, this.items,
+      [this.emailReady = false]);
   bool get closed => status == 'closed';
+}
+
+class MailJob {
+  final bool running;
+  final int total;
+  final int sent;
+  final int failed;
+  final int skipped;
+  final DateTime? finishedAt;
+  final String? lastError;
+  const MailJob(this.running, this.total, this.sent, this.failed, this.skipped,
+      this.finishedAt, this.lastError);
+  int get done => sent + failed + skipped;
+  factory MailJob.fromJson(Map<String, dynamic> j) => MailJob(
+        j['running'] == true,
+        j['total'] ?? 0,
+        j['sent'] ?? 0,
+        j['failed'] ?? 0,
+        j['skipped'] ?? 0,
+        j['finishedAt'] == null ? null : parseUtc(j['finishedAt']),
+        j['lastError'],
+      );
 }
 
 String currentSchoolYear([DateTime? now]) {
@@ -749,22 +777,51 @@ class AppState extends ChangeNotifier {
 
   Future<SeasonVoters> fetchSeasonVoters(int electionId) async {
     final j = await Api.get('/api/admin/elections/$electionId/voters');
-    return SeasonVoters(j['status'], j['total'], j['voted'], [
-      for (final v in j['items'])
-        SeasonVoter(
-          v['studentId'],
-          v['studentNum'],
-          personName(v['fullName']),
-          v['gradeLevelId'],
-          v['gradeLevel'],
-          v['programCode'],
-          v['section'] ?? '',
-          v['isActive'],
-          v['password'],
-          v['hasVoted'],
-          v['votedAt'] == null ? null : parseUtc(v['votedAt']),
-        ),
-    ]);
+    return SeasonVoters(
+        j['status'],
+        j['total'],
+        j['voted'],
+        [
+          for (final v in j['items'])
+            SeasonVoter(
+              v['studentId'],
+              v['studentNum'],
+              personName(v['fullName']),
+              v['gradeLevelId'],
+              v['gradeLevel'],
+              v['programCode'],
+              v['section'] ?? '',
+              v['isActive'],
+              v['password'],
+              v['hasVoted'],
+              v['votedAt'] == null ? null : parseUtc(v['votedAt']),
+              v['email'],
+              v['passwordSentAt'] == null
+                  ? null
+                  : parseUtc(v['passwordSentAt']),
+            ),
+        ],
+        j['emailReady'] == true);
+  }
+
+  Future<String> emailSeasonPassword(int electionId, int studentId) async {
+    final j = await Api.post(
+        '/api/admin/elections/$electionId/voters/$studentId/password/email');
+    return j['email'] as String;
+  }
+
+  Future<MailJob> emailAllSeasonPasswords(int electionId,
+      {required bool onlyUnsent}) async {
+    final j = await Api.post(
+        '/api/admin/elections/$electionId/voters/password/email-all',
+        {'onlyUnsent': onlyUnsent});
+    return MailJob.fromJson(j);
+  }
+
+  Future<MailJob> emailAllStatus(int electionId) async {
+    final j = await Api.get(
+        '/api/admin/elections/$electionId/voters/password/email-all');
+    return MailJob.fromJson(j);
   }
 
   Future<String> resetSeasonPassword(int electionId, int studentId) async {
