@@ -93,7 +93,6 @@ class SeasonManagerPage extends StatelessWidget {
                 onVoters: () => _voters(context, e),
                 onParties: () => _parties(context, e),
                 onClose: () => _close(context, e),
-                onEdit: () => showElectionForm(context, existing: e),
               ),
             if (ended.isNotEmpty) _heading('Voting ended, tally pending'),
             for (final e in ended)
