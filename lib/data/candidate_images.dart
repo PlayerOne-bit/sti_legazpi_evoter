@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/widgets.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
@@ -12,15 +13,17 @@ class CandidateImages {
 
   static Future<String?> pickAndUploadTo(
       BuildContext context, String path) async {
-    final picked = await FilePicker.platform.pickFiles(
+    final file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
-      withData: true,
     );
-    if (picked == null || picked.files.isEmpty) return null;
-    final file = picked.files.first;
-    final bytes = file.bytes;
-    if (bytes == null) return 'Could not read that file.';
+    if (file == null) return null;
+    final Uint8List bytes;
+    try {
+      bytes = await file.readAsBytes();
+    } catch (_) {
+      return 'Could not read that file.';
+    }
     if (bytes.length > 15 * 1024 * 1024) return 'Choose an image under 15 MB.';
 
     if (!context.mounted) return null;

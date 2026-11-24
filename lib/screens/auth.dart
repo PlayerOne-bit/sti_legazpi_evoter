@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../data/api.dart';
+import '../data/app_update.dart';
 import '../data/mock.dart';
 import '../theme.dart';
 import '../widgets/blue_button.dart';
+import '../widgets/update_dialog.dart';
 import 'admin/admin_shell.dart';
 import 'client/home.dart';
 
@@ -29,6 +31,33 @@ class _AuthPageState extends State<AuthPage> {
   String? _challenge;
   String _emailHint = '';
   final _code = TextEditingController();
+
+  AppUpdateInfo? _update;
+  String _version = '';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkUpdate());
+  }
+
+  Future<void> _checkUpdate() async {
+    final update = await AppUpdater.check();
+    if (!mounted || update == null) return;
+    final current = await AppUpdater.current();
+    if (!mounted) return;
+    setState(() {
+      _update = update;
+      _version = current.version;
+    });
+    await _openUpdate();
+  }
+
+  Future<void> _openUpdate() async {
+    final update = _update;
+    if (update == null) return;
+    await showUpdateDialog(context, update, _version);
+  }
 
   TextEditingController get _user => admin ? _adminUser : _studentUser;
   TextEditingController get _pass => admin ? _adminPass : _studentPass;
@@ -295,11 +324,50 @@ class _AuthPageState extends State<AuthPage> {
       floatingActionButtonLocation: FloatingActionButtonLocation.endTop,
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(top: 8),
-        child: Material(
-          color: C.surface,
-          shape: const CircleBorder(),
-          elevation: 2,
-          child: ThemeToggleButton(color: C.blue),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
+              child: _update == null
+                  ? const SizedBox.shrink()
+                  : Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Material(
+                        color: C.yellow,
+                        borderRadius: BorderRadius.circular(24),
+                        elevation: 2,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(24),
+                          onTap: _openUpdate,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.system_update_alt,
+                                    size: 18, color: C.onYellow),
+                                const SizedBox(width: 6),
+                                Text('Update to ${_update!.version}',
+                                    style: const TextStyle(
+                                        color: C.onYellow,
+                                        fontWeight: FontWeight.w800)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
+            Material(
+              color: C.surface,
+              shape: const CircleBorder(),
+              elevation: 2,
+              child: ThemeToggleButton(color: C.blue),
+            ),
+          ],
         ),
       ),
       body: LayoutBuilder(

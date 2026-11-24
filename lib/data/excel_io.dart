@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io' show File;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -50,21 +49,15 @@ class ExcelIo {
   static Future<String> save(String path, String fileName) async {
     try {
       final bytes = await _download(path);
-      final target = await FilePicker.platform.saveFile(
+      final target = await FilePicker.saveFile(
         dialogTitle: 'Save Excel file',
         fileName: fileName,
         bytes: bytes,
-        type: FileType.custom,
-        allowedExtensions: const ['xlsx'],
+        mimeType:
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       );
       if (kIsWeb) return 'Download started.';
       if (target == null) return 'Save cancelled.';
-      final desktop = {
-        TargetPlatform.windows,
-        TargetPlatform.linux,
-        TargetPlatform.macOS,
-      }.contains(defaultTargetPlatform);
-      if (desktop) await File(target).writeAsBytes(bytes);
       return 'Saved $fileName.';
     } on ApiException catch (e) {
       return e.message;
@@ -89,15 +82,15 @@ class ExcelIo {
       save('/api/admin/elections/$electionId/export', fileName);
 
   static Future<ImportResult?> pickAndImport({int? electionId}) async {
-    final picked = await FilePicker.platform.pickFiles(
+    final file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: const ['xls', 'xlsx'],
-      withData: true,
     );
-    if (picked == null || picked.files.isEmpty) return null;
-    final file = picked.files.first;
-    final bytes = file.bytes;
-    if (bytes == null) {
+    if (file == null) return null;
+    final Uint8List bytes;
+    try {
+      bytes = await file.readAsBytes();
+    } catch (_) {
       return const ImportResult(0, 0, ['The file could not be read.']);
     }
 

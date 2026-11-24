@@ -19,8 +19,14 @@ class TwoFactorRequired implements Exception {
 class Api {
   static const _lanHost = 'YOUR-PC-IP';
   static const _useLan = false;
+  static const _apiUrl = String.fromEnvironment('API_URL');
 
   static String get baseUrl {
+    if (_apiUrl.isNotEmpty) {
+      return _apiUrl.endsWith('/')
+          ? _apiUrl.substring(0, _apiUrl.length - 1)
+          : _apiUrl;
+    }
     if (_useLan) return 'http://$_lanHost:5080';
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       return 'http://10.0.2.2:5080';
