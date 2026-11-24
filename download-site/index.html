@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STI eVoter Download</title>
+  <meta name="description" content="Download the STI Legazpi eVoter app for Android and Windows.">
+  <meta name="theme-color" content="#0A4DA2">
+  <link rel="icon" href="logo.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="config.js"></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap hero-inner">
+      <img class="logo" src="logo.jpg" alt="" width="64" height="64">
+      <div>
+        <p class="eyebrow">STI College Legazpi</p>
+        <h1>STI eVoter</h1>
+        <p class="tagline">Vote anywhere. Be faster, no waiting in line.</p>
+      </div>
+    </div>
+    <div class="accent"></div>
+  </header>
+
+  <main class="wrap">
+    <section class="intro reveal">
+      <h2>Get the app</h2>
+      <p>Sign in with your student number and the season password your adviser gives you. The app updates itself when a new version comes out.</p>
+      <p class="status" id="status" role="status">Checking the latest version...</p>
+    </section>
+
+    <section class="cards">
+      <article class="card reveal" id="card-android" data-platform="android">
+        <div class="card-head">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="28" height="28"><path fill="currentColor" d="M17.6 9.48l1.84-3.18a.39.39 0 00-.68-.39l-1.86 3.22A11.4 11.4 0 0012 8.1c-1.77 0-3.4.37-4.9 1.03L5.24 5.91a.39.39 0 00-.68.39L6.4 9.48A10.8 10.8 0 001 18h22a10.8 10.8 0 00-5.4-8.52zM7 15.25a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5zm10 0a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5z"/></svg>
+          </span>
+          <div>
+            <h3>Android</h3>
+            <p class="meta" data-field="meta">Phones and tablets</p>
+          </div>
+          <span class="badge" data-field="badge" hidden>Recommended for you</span>
+        </div>
+        <a class="btn" data-field="button" href="#" aria-disabled="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 2h14v2H5v-2z"/></svg>
+          <span>Download APK</span>
+        </a>
+        <details class="how">
+          <summary>How to install</summary>
+          <ol>
+            <li>Tap <b>Download APK</b> and open the file when it finishes.</li>
+            <li>If Android asks, allow your browser or Files app to <b>install unknown apps</b>.</li>
+            <li>Tap <b>Install</b>, then open <b>STI eVoter</b>.</li>
+          </ol>
+        </details>
+      </article>
+
+      <article class="card reveal" id="card-windows" data-platform="windows">
+        <div class="card-head">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26"><path fill="currentColor" d="M3 5.1l7.4-1v7.2H3V5.1zm8.4-1.15L21 2.5v8.8h-9.6V3.95zM3 12.7h7.4v7.2L3 18.9v-6.2zm8.4 0H21v8.8l-9.6-1.35V12.7z"/></svg>
+          </span>
+          <div>
+            <h3>Windows</h3>
+            <p class="meta" data-field="meta">Windows 10 and 11, 64-bit</p>
+          </div>
+          <span class="badge" data-field="badge" hidden>Recommended for you</span>
+        </div>
+        <a class="btn" data-field="button" href="#" aria-disabled="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 2h14v2H5v-2z"/></svg>
+          <span>Download for Windows</span>
+        </a>
+        <details class="how">
+          <summary>How to install</summary>
+          <ol>
+            <li>Download the .zip and <b>Extract all</b> to a folder, for example Documents\STI eVoter.</li>
+            <li>Open <b>sti_legazpi_evoter.exe</b>.</li>
+            <li>If Windows SmartScreen appears, choose <b>More info &gt; Run anyway</b>.</li>
+          </ol>
+        </details>
+      </article>
+    </section>
+
+    <section class="notes reveal" id="notes" hidden>
+      <h2>What's new</h2>
+      <p id="notes-text"></p>
+    </section>
+  </main>
+
+  <footer class="wrap footer">
+    <p>STI College Legazpi student elections. Only download the app from this page.</p>
+  </footer>
+</body>
+</html>
