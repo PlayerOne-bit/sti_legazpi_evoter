@@ -5,7 +5,8 @@ param(
     [switch]$Mandatory,
     [int]$MinBuild = 0,
     [switch]$SkipAndroid,
-    [switch]$SkipWindows
+    [switch]$SkipWindows,
+    [switch]$GitHubRelease
 )
 
 $ErrorActionPreference = "Stop"
@@ -14,13 +15,23 @@ Set-Location $projectRoot
 
 $ApiUrl = $ApiUrl.TrimEnd("/")
 if ($ApiUrl -notmatch "^https://") {
-    throw "ApiUrl must start with https:// (for example https://your-name.duckdns.org)."
+    throw "ApiUrl must start with https:// (for example https://sti-evoter-api.onrender.com)."
 }
 
 $version = (Select-String -Path pubspec.yaml -Pattern "^version:\s*(\S+)").Matches[0].Groups[1].Value
 $name = ($version -split "\+")[0]
 $build = [int](($version -split "\+")[1])
 $manifest = [ordered]@{}
+$files = @()
+
+function New-Entry($path) {
+    $info = Get-Item $path
+    [ordered]@{
+        version = $name; build = $build; file = $info.Name; notes = $Notes
+        mandatory = [bool]$Mandatory; minBuild = $MinBuild
+        sha256 = (Get-FileHash $path -Algorithm SHA256).Hash.ToLowerInvariant(); size = $info.Length
+    }
+}
 $dist = Join-Path $projectRoot "dist"
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
 
@@ -36,7 +47,8 @@ if (-not $SkipAndroid) {
     if ($LASTEXITCODE -ne 0) { throw "Android build failed." }
     $apk = Join-Path $dist "STI-eVoter-$name.apk"
     Copy-Item "build\app\outputs\flutter-apk\app-release.apk" $apk -Force
-    $manifest["android"] = [ordered]@{ version = $name; build = $build; file = (Split-Path $apk -Leaf); notes = $Notes; mandatory = [bool]$Mandatory; minBuild = $MinBuild }
+    $manifest["android"] = New-Entry $apk
+    $files += $apk
     Write-Host "Android: $apk"
 }
 
@@ -51,12 +63,26 @@ if (-not $SkipWindows) {
     $zip = Join-Path $dist "STI-eVoter-$name-windows.zip"
     if (Test-Path $zip) { Remove-Item $zip -Force }
     Compress-Archive -Path "$release\*" -DestinationPath $zip
-    $manifest["windows"] = [ordered]@{ version = $name; build = $build; file = (Split-Path $zip -Leaf); notes = $Notes; mandatory = [bool]$Mandatory; minBuild = $MinBuild }
+    $manifest["windows"] = New-Entry $zip
+    $files += $zip
     Write-Host "Windows: $zip"
 }
 
-$manifest | ConvertTo-Json -Depth 4 | Set-Content -Path (Join-Path $dist "version.json") -Encoding utf8
-Write-Host "Update manifest: $(Join-Path $dist 'version.json')"
+$manifestPath = Join-Path $dist "version.json"
+$json = $manifest | ConvertTo-Json -Depth 4
+[System.IO.File]::WriteAllText($manifestPath, $json, (New-Object System.Text.UTF8Encoding $false))
+$files += $manifestPath
+Write-Host "Update manifest: $manifestPath"
 Write-Host "Done. Files are in $dist"
-Write-Host "To publish as an in-app update, copy the dist files to the server's deploy/downloads folder (see DEPLOY.md)."
+
+if ($GitHubRelease) {
+    if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw "GitHub CLI (gh) is not installed. Get it from https://cli.github.com" }
+    if ($SkipAndroid -or $SkipWindows) { Write-Warning "This release only has some platforms. The latest release is what the app reads, so the skipped platform will show no update." }
+    $releaseNotes = if ($Notes) { $Notes } else { "STI eVoter $name" }
+    gh release create "v$name" @files --title "STI eVoter $name" --notes $releaseNotes --latest
+    if ($LASTEXITCODE -ne 0) { throw "gh release create failed. If v$name already exists, raise the version in pubspec.yaml." }
+    Write-Host "Published GitHub release v$name. The server picks it up within 5 minutes."
+} else {
+    Write-Host "To publish: copy the dist files to the server's deploy/downloads folder (DEPLOY.md), or run again with -GitHubRelease (DEPLOY-RENDER.md)."
+}
 Write-Host "Before the next release, raise the build number in pubspec.yaml (for example 1.0.1+2)."
