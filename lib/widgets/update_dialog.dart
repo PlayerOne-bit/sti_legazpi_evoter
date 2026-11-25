@@ -103,6 +103,7 @@ Future<void> showUpdateDialog(
               ],
             ),
           ),
+          scrollable: true,
           content: SizedBox(
             width: 380,
             child: Column(

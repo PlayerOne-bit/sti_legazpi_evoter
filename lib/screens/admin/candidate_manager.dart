@@ -93,6 +93,7 @@ class _SeasonCandidatesScreenState extends State<SeasonCandidatesScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) => AlertDialog(
           title: Text(existing == null ? 'Add position' : 'Edit position'),
+          scrollable: true,
           content: SizedBox(
             width: 380,
             child: Column(
@@ -217,8 +218,12 @@ class _SeasonCandidatesScreenState extends State<SeasonCandidatesScreen> {
     final search = TextEditingController();
     final party = TextEditingController();
     final motto = TextEditingController();
+    // -1 stands for "New position": the position is created together with the candidate.
+    const newPos = -1;
     int? pos = positionId ??
-        (state.adminPositions.isEmpty ? null : state.adminPositions.first.id);
+        (state.adminPositions.isEmpty ? newPos : state.adminPositions.first.id);
+    final newTitle = TextEditingController();
+    int newRank = state.adminPositions.length + 1;
     final taken = {for (final c in state.adminCandidates) c.studentNum};
 
     Student? picked;
@@ -453,6 +458,19 @@ class _SeasonCandidatesScreenState extends State<SeasonCandidatesScreen> {
                       initialValue: pos,
                       decoration: const InputDecoration(labelText: 'Position'),
                       items: [
+                        DropdownMenuItem(
+                          value: newPos,
+                          child: Row(
+                            children: [
+                              Icon(Icons.add, size: 18, color: C.blue),
+                              const SizedBox(width: 6),
+                              Text('New position',
+                                  style: TextStyle(
+                                      color: C.blue,
+                                      fontWeight: FontWeight.w700)),
+                            ],
+                          ),
+                        ),
                         for (final p in state.adminPositions)
                           DropdownMenuItem(
                             value: p.id,
@@ -474,7 +492,50 @@ class _SeasonCandidatesScreenState extends State<SeasonCandidatesScreen> {
                                 error = null;
                               }),
                     ),
-                    if (pos != null && _partyHolder(pos!, party.text) != null)
+                    if (pos == newPos) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: 88,
+                            child: DropdownButtonFormField<int>(
+                              initialValue: newRank,
+                              decoration:
+                                  const InputDecoration(labelText: 'Rank'),
+                              items: [
+                                for (var i = 1;
+                                    i <= state.adminPositions.length + 1;
+                                    i++)
+                                  DropdownMenuItem(value: i, child: Text('$i')),
+                              ],
+                              onChanged: saving
+                                  ? null
+                                  : (v) => setS(() => newRank = v!),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: newTitle,
+                              enabled: !saving,
+                              textCapitalization: TextCapitalization.words,
+                              onChanged: (_) => setS(() => error = null),
+                              decoration: const InputDecoration(
+                                  labelText: 'Position title',
+                                  hintText: 'For example President'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                          'Rank 1 is shown first on the ballot. Other positions move down to make room.',
+                          style: TextStyle(color: C.muted, fontSize: 12)),
+                    ],
+                    if (pos != null &&
+                        pos != newPos &&
+                        _partyHolder(pos!, party.text) != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Row(
@@ -525,10 +586,16 @@ class _SeasonCandidatesScreenState extends State<SeasonCandidatesScreen> {
                           return;
                         }
                         if (pos == null) {
-                          setS(() => error = 'This season has no positions.');
+                          setS(() => error = 'Choose a position.');
                           return;
                         }
-                        final holder = _partyHolder(pos!, party.text);
+                        if (pos == newPos && newTitle.text.trim().isEmpty) {
+                          setS(() => error = 'Enter the new position title.');
+                          return;
+                        }
+                        final holder = pos == newPos
+                            ? null
+                            : _partyHolder(pos!, party.text);
                         if (holder != null) {
                           setS(() => error =
                               '${party.text.trim()} already has ${holder.name} for this position.');
@@ -538,6 +605,28 @@ class _SeasonCandidatesScreenState extends State<SeasonCandidatesScreen> {
                           saving = true;
                           error = null;
                         });
+                        if (pos == newPos) {
+                          final title = newTitle.text.trim();
+                          final posErr = await state.addPosition(
+                              electionId, title, newRank);
+                          if (!ctx.mounted) return;
+                          if (posErr != null) {
+                            setS(() {
+                              saving = false;
+                              error = posErr;
+                            });
+                            return;
+                          }
+                          // Keep the new position picked, so a retry does not create it twice.
+                          final made = state.adminPositions.where((p) =>
+                              p.title.trim().toLowerCase() ==
+                              title.toLowerCase());
+                          final found = made.isNotEmpty
+                              ? made.first
+                              : state.adminPositions
+                                  .firstWhere((p) => p.displayOrder == newRank);
+                          setS(() => pos = found.id);
+                        }
                         final err = await state.addCandidateFor(
                           electionId: electionId,
                           studentId: picked!.id,
@@ -574,6 +663,7 @@ class _SeasonCandidatesScreenState extends State<SeasonCandidatesScreen> {
     );
 
     debounce?.cancel();
+    newTitle.dispose();
     search.dispose();
     party.dispose();
     motto.dispose();
@@ -889,14 +979,13 @@ class _SeasonCandidatesScreenState extends State<SeasonCandidatesScreen> {
               ),
             ],
           ),
-          floatingActionButton:
-              editable && ready && state.adminPositions.isNotEmpty
-                  ? FloatingActionButton.extended(
-                      onPressed: () => _add(context, e.id),
-                      icon: const Icon(Icons.person_add),
-                      label: const Text('Add candidate'),
-                    )
-                  : null,
+          floatingActionButton: editable && ready
+              ? FloatingActionButton.extended(
+                  onPressed: () => _add(context, e.id),
+                  icon: const Icon(Icons.person_add),
+                  label: const Text('Add candidate'),
+                )
+              : null,
           body: CenteredBody(
             maxWidth: 800,
             child: StaggerListView(
@@ -920,15 +1009,11 @@ class _SeasonCandidatesScreenState extends State<SeasonCandidatesScreen> {
                             style: const TextStyle(
                                 fontSize: 18, fontWeight: FontWeight.w800)),
                         const SizedBox(width: 8),
-                        Text('ranked as shown on the ballot',
-                            style: TextStyle(color: C.muted, fontSize: 12)),
-                        const Spacer(),
-                        if (editable)
-                          OutlinedButton.icon(
-                            onPressed: () => _positionDialog(e.id),
-                            icon: const Icon(Icons.add, size: 18),
-                            label: const Text('Add position'),
-                          ),
+                        Expanded(
+                          child: Text('ranked as shown on the ballot',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: C.muted, fontSize: 12)),
+                        ),
                       ],
                     ),
                   ),
@@ -937,7 +1022,7 @@ class _SeasonCandidatesScreenState extends State<SeasonCandidatesScreen> {
                       padding: const EdgeInsets.all(20),
                       child: Text(
                           editable
-                              ? 'No positions yet. Add one, for example 1 - President.'
+                              ? 'No positions yet. Tap Add candidate and choose New position, for example President.'
                               : 'This season has no positions.',
                           textAlign: TextAlign.center,
                           style: TextStyle(color: C.muted)),

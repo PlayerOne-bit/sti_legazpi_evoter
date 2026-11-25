@@ -6,8 +6,15 @@ class StudentCard extends StatelessWidget {
   final Student student;
   final VoidCallback? onToggleActive;
   final VoidCallback? onDelete;
+
+  /// Set only for the super admin.
+  final VoidCallback? onEdit;
   const StudentCard(
-      {super.key, required this.student, this.onToggleActive, this.onDelete});
+      {super.key,
+      required this.student,
+      this.onToggleActive,
+      this.onDelete,
+      this.onEdit});
 
   @override
   Widget build(BuildContext context) {
@@ -71,10 +78,20 @@ class StudentCard extends StatelessWidget {
             PopupMenuButton<String>(
               tooltip: 'Options',
               onSelected: (v) {
+                if (v == 'edit') onEdit?.call();
                 if (v == 'toggle') onToggleActive?.call();
                 if (v == 'delete') onDelete?.call();
               },
               itemBuilder: (_) => [
+                if (onEdit != null)
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: ListTile(
+                      dense: true,
+                      leading: Icon(Icons.edit_outlined),
+                      title: Text('Edit student'),
+                    ),
+                  ),
                 PopupMenuItem(
                   value: 'toggle',
                   child: ListTile(

@@ -2,10 +2,21 @@ import 'package:flutter/material.dart';
 import '../../theme.dart';
 import '../../data/mock.dart';
 
-Future<void> showStudentForm(BuildContext context) async {
-  final numCtl = TextEditingController();
-  final lastCtl = TextEditingController();
-  final firstCtl = TextEditingController();
+/// Adds a student, or edits [existing] (super admin only).
+Future<void> showStudentForm(BuildContext context, {Student? existing}) async {
+  // Names are stored as "Last, First Middle"; when editing, everything after the comma goes in First name.
+  final comma = existing?.fullName.indexOf(',') ?? -1;
+  final numCtl = TextEditingController(text: existing?.studentNum ?? '');
+  final lastCtl = TextEditingController(
+      text: existing == null
+          ? ''
+          : comma < 0
+              ? existing.fullName
+              : existing.fullName.substring(0, comma).trim());
+  final firstCtl = TextEditingController(
+      text: existing == null || comma < 0
+          ? ''
+          : existing.fullName.substring(comma + 1).trim());
   final middleCtl = TextEditingController();
   String fullName() {
     final last = lastCtl.text.trim();
@@ -13,10 +24,12 @@ Future<void> showStudentForm(BuildContext context) async {
     return given.isEmpty ? last : '$last, $given';
   }
 
-  final sectionCtl = TextEditingController();
-  int grade = 6;
-  int? programId;
-  String year = currentSchoolYear();
+  final sectionCtl = TextEditingController(text: existing?.section ?? '');
+  int grade = existing?.gradeLevelId ?? 6;
+  int? programId = existing?.programId;
+  String year = existing != null && existing.schoolYear.isNotEmpty
+      ? existing.schoolYear
+      : currentSchoolYear();
   final years = {year, ...state.schoolYears, ...state.studentSchoolYears}
       .toList()
     ..sort((a, b) => b.compareTo(a));
@@ -31,7 +44,7 @@ Future<void> showStudentForm(BuildContext context) async {
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setS) => AlertDialog(
-        title: const Text('Add student'),
+        title: Text(existing == null ? 'Add student' : 'Edit student'),
         content: SizedBox(
           width: 420,
           child: SingleChildScrollView(
@@ -76,8 +89,10 @@ Future<void> showStudentForm(BuildContext context) async {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: year,
-                  decoration:
-                      const InputDecoration(labelText: 'School year added'),
+                  decoration: InputDecoration(
+                      labelText: existing == null
+                          ? 'School year added'
+                          : 'School year'),
                   items: [
                     for (final y in years)
                       DropdownMenuItem(value: y, child: Text(y)),
@@ -127,27 +142,28 @@ Future<void> showStudentForm(BuildContext context) async {
                     ),
                 ],
                 const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: C.tint,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.key_outlined, size: 18, color: C.blue),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        child: Text(
-                          'Students sign in with a season password. Find it in the '
-                          'Voters list of each season they can vote in.',
-                          style: TextStyle(fontSize: 12.5),
+                if (existing == null)
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: C.tint,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.key_outlined, size: 18, color: C.blue),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Students sign in with a season password. Find it in the '
+                            'Voters list of each season they can vote in.',
+                            style: TextStyle(fontSize: 12.5),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
                 if (error != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 10),
@@ -180,14 +196,24 @@ Future<void> showStudentForm(BuildContext context) async {
                       saving = true;
                       error = null;
                     });
-                    final err = await state.addStudent(
-                      studentNum: numCtl.text,
-                      fullName: fullName(),
-                      gradeLevelId: grade,
-                      schoolYear: year,
-                      section: sectionCtl.text,
-                      programId: programId,
-                    );
+                    final err = existing == null
+                        ? await state.addStudent(
+                            studentNum: numCtl.text,
+                            fullName: fullName(),
+                            gradeLevelId: grade,
+                            schoolYear: year,
+                            section: sectionCtl.text,
+                            programId: programId,
+                          )
+                        : await state.updateStudent(
+                            id: existing.id,
+                            studentNum: numCtl.text,
+                            fullName: fullName(),
+                            gradeLevelId: grade,
+                            schoolYear: year,
+                            section: sectionCtl.text,
+                            programId: programId,
+                          );
                     if (err != null) {
                       setS(() {
                         saving = false;
@@ -198,7 +224,11 @@ Future<void> showStudentForm(BuildContext context) async {
                     added = true;
                     if (ctx.mounted) Navigator.pop(ctx);
                   },
-            child: Text(saving ? 'Adding...' : 'Add student'),
+            child: Text(saving
+                ? 'Saving...'
+                : existing == null
+                    ? 'Add student'
+                    : 'Save changes'),
           ),
         ],
       ),
@@ -207,6 +237,8 @@ Future<void> showStudentForm(BuildContext context) async {
 
   if (added && context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('${fullName()} was added as an active student.')));
+        content: Text(existing == null
+            ? '${fullName()} was added as an active student.'
+            : '${fullName()} was saved.')));
   }
 }

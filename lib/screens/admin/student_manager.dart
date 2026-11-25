@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../widgets/anim.dart';
+import '../../data/admin_accounts.dart';
 import '../../data/api.dart';
 import '../../data/excel_io.dart';
 import '../../data/mock.dart';
@@ -29,6 +30,17 @@ class _StudentManagerPageState extends State<StudentManagerPage> {
   void initState() {
     super.initState();
     state.loadStudents();
+    _checkSuper();
+  }
+
+  /// Only the super admin may edit students; others still add, deactivate and delete.
+  bool _isSuper = false;
+
+  Future<void> _checkSuper() async {
+    try {
+      final me = await AdminApi.account();
+      if (mounted) setState(() => _isSuper = me.isSuper);
+    } on ApiException catch (_) {}
   }
 
   void _toast(String text) {
@@ -330,6 +342,9 @@ class _StudentManagerPageState extends State<StudentManagerPage> {
                             student: s,
                             onToggleActive: () => _setActive(s, !s.isActive),
                             onDelete: s.canDelete ? () => _delete(s) : null,
+                            onEdit: _isSuper
+                                ? () => showStudentForm(context, existing: s)
+                                : null,
                           ),
                       ],
                     ),

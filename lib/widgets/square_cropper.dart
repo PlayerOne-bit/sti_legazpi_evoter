@@ -78,66 +78,54 @@ class _CropDialogState extends State<_CropDialog> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final size = _size;
-    return AlertDialog(
-      insetPadding: const EdgeInsets.all(16),
-      contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      title: const Text('Crop photo'),
-      content: SizedBox(
+  Widget _cropArea(Size? size) {
+    if (_error != null) {
+      return SizedBox(
         width: _box,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Drag to move, pinch or scroll to zoom.',
-                style: TextStyle(color: C.muted, fontSize: 13)),
-            const SizedBox(height: 12),
-            if (_error != null)
-              Text(_error!, style: TextStyle(color: C.danger))
-            else if (size == null)
-              const SizedBox(
-                  height: _box,
-                  child: Center(child: CircularProgressIndicator()))
-            else
-              SizedBox(
-                width: _box,
-                height: _box,
-                child: Stack(
-                  children: [
-                    RepaintBoundary(
-                      key: _key,
-                      child: ClipRect(
-                        child: InteractiveViewer(
-                          transformationController: _ctl,
-                          constrained: false,
-                          minScale: 1,
-                          maxScale: 6,
-                          boundaryMargin: EdgeInsets.zero,
-                          child: Image.memory(widget.bytes,
-                              width: size.width,
-                              height: size.height,
-                              fit: BoxFit.fill,
-                              gaplessPlayback: true),
-                        ),
-                      ),
-                    ),
-                    IgnorePointer(
-                      child: Container(
-                        decoration: BoxDecoration(
-                            border: Border.all(color: Colors.white, width: 2)),
-                        child: CustomPaint(
-                            painter: _GridPainter(), size: Size.infinite),
-                      ),
-                    ),
-                  ],
-                ),
+        child: Text(_error!, style: TextStyle(color: C.danger)),
+      );
+    }
+    if (size == null) {
+      return const SizedBox(
+          width: _box,
+          height: _box,
+          child: Center(child: CircularProgressIndicator()));
+    }
+    return SizedBox(
+      width: _box,
+      height: _box,
+      child: Stack(
+        children: [
+          RepaintBoundary(
+            key: _key,
+            child: ClipRect(
+              child: InteractiveViewer(
+                transformationController: _ctl,
+                constrained: false,
+                minScale: 1,
+                maxScale: 6,
+                boundaryMargin: EdgeInsets.zero,
+                child: Image.memory(widget.bytes,
+                    width: size.width,
+                    height: size.height,
+                    fit: BoxFit.fill,
+                    gaplessPlayback: true),
               ),
-            const SizedBox(height: 12),
-          ],
-        ),
+            ),
+          ),
+          IgnorePointer(
+            child: Container(
+              decoration: BoxDecoration(
+                  border: Border.all(color: Colors.white, width: 2)),
+              child: CustomPaint(painter: _GridPainter(), size: Size.infinite),
+            ),
+          ),
+        ],
       ),
-      actions: [
+    );
+  }
+
+  List<Widget> _buttons(Size? size) => [
         TextButton(
             onPressed: _busy ? null : () => Navigator.pop(context),
             child: const Text('Cancel')),
@@ -150,7 +138,70 @@ class _CropDialogState extends State<_CropDialog> {
                   child: CircularProgressIndicator(strokeWidth: 2))
               : const Text('Confirm'),
         ),
-      ],
+      ];
+
+  @override
+  Widget build(BuildContext context) {
+    final size = _size;
+    final hint = Text('Drag to move, pinch or scroll to zoom.',
+        style: TextStyle(color: C.muted, fontSize: 13));
+
+    // A phone held sideways is too short for the photo above the buttons, so put them side by side.
+    if (MediaQuery.sizeOf(context).height < 520) {
+      return Dialog(
+        insetPadding: const EdgeInsets.all(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _cropArea(size),
+              const SizedBox(width: 16),
+              SizedBox(
+                width: 230,
+                height: _box,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Crop photo',
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 6),
+                    hint,
+                    const Spacer(),
+                    Wrap(
+                      alignment: WrapAlignment.end,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _buttons(size),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return AlertDialog(
+      insetPadding: const EdgeInsets.all(16),
+      contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      title: const Text('Crop photo'),
+      content: SizedBox(
+        width: _box,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            hint,
+            const SizedBox(height: 12),
+            _cropArea(size),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+      actions: _buttons(size),
     );
   }
 }

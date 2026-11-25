@@ -124,6 +124,7 @@ Future<void> showPartyEditor(BuildContext context, int partyId) async {
       }
 
       return AlertDialog(
+        scrollable: true,
         contentPadding: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
         content: SizedBox(

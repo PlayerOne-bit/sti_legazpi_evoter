@@ -2,6 +2,16 @@
 // Small fix releases are grouped with the version they came with. Keep in step with README.md.
 window.EVOTER_HISTORY = [
   {
+    versions: "1.0.7",
+    date: "November 25, 2026",
+    title: "Landscape and student editing",
+    changes: [
+      "Works on phones held sideways.",
+      "The super admin can edit student details. Student numbers and full names must be unique.",
+      "Positions are created right in the Add candidate dialog, and Create voting season is a floating button."
+    ]
+  },
+  {
     versions: "1.0.6",
     date: "November 25, 2026",
     title: "One season per sign-in",

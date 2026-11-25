@@ -22,10 +22,10 @@ Sign in with **Admin** on the sign-in screen.
 |---|---|
 | **Dashboard** | The current season, a live countdown, and turnout. |
 | **Seasons** | Create a season: club, school year, voting dates and who can vote by grade level. The date calendar shows the chosen days in blue and days already used by another season circled in red. Upcoming seasons can be edited or deleted. Once voting starts a season is locked; end it with **Close season and tally votes**. A season that still has no candidates when voting opens is deleted automatically. |
-| **Candidates** | Positions and candidates for a season, with photos (cropped square) and party lists. Editable until voting starts. |
+| **Candidates** | Candidates for a season, with photos (cropped square) and party lists. Positions are created from **Add candidate** by choosing **New position**; each position can be renamed, re-ranked or deleted from its own menu. Editable until voting starts. |
 | **Party lists** | Names, colors and logos. |
 | **Voters** | The season's voter list with a password for each student. Send passwords by email one at a time or all at once, make a new password, or export the list to Excel. |
-| **Students** | Add students by hand or import from Excel, mark them inactive (graduated, transferred and so on), filter by school year and grade level. When a new school year starts (June), last year's students become inactive automatically. Importing them again (same student number, or same name with a new number) updates their school year, level and section and makes them active again. |
+| **Students** | Add students by hand or import from Excel, mark them inactive (graduated, transferred and so on), filter by school year and grade level. When a new school year starts (June), last year's students become inactive automatically. Importing them again (same student number, or same name with a new number) updates their school year, level and section and makes them active again. Student numbers and full names must be unique; people may share a first, middle or last name. The super admin can also edit a student's details. |
 | **History** | Closed seasons with winners and polls. **Run again** copies a season's setup into a new one. |
 | **Admins** | The super admin adds and removes other admins, and can turn on two-step sign-in by email. |
 
@@ -76,6 +76,12 @@ Add `-Mandatory` to force everyone to update. Always build both platforms, becau
 ## Update history
 
 Small fixes are grouped with the version they came with.
+
+### 1.0.7 · November 25, 2026
+- Works on phones held sideways: the admin menu moves to the side, and dialogs and the photo cropper fit the screen.
+- The super admin can edit students. Student numbers and full names must be unique.
+- New positions are created right in the Add candidate dialog.
+- **Create voting season** is now a floating button that stays clear of the season list.
 
 ### 1.0.6 · November 25, 2026
 - A student's sign-in opens only the season their password belongs to.

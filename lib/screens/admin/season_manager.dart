@@ -4,7 +4,6 @@ import '../../data/mock.dart';
 import '../../theme.dart';
 import '../../widgets/admin/election_card.dart';
 import '../../widgets/admin/election_form.dart';
-import '../../widgets/blue_button.dart';
 import 'candidate_manager.dart';
 import 'season_voters_screen.dart';
 import 'party_lists_screen.dart';
@@ -77,14 +76,10 @@ class SeasonManagerPage extends StatelessWidget {
             .where((e) => e.status == ElectionStatus.upcoming)
             .toList()
           ..sort((a, b) => a.startDate.compareTo(b.startDate));
-        return StaggerListView(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+        final list = StaggerListView(
+          // Bottom room for the floating button, so it never covers the last card.
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 96),
           children: [
-            BlueButton(
-              label: 'Create voting season',
-              icon: Icons.add,
-              onPressed: () => showElectionForm(context),
-            ),
             if (open.isNotEmpty) _heading('Open now'),
             for (final e in open)
               ElectionCard(
@@ -117,11 +112,29 @@ class SeasonManagerPage extends StatelessWidget {
               Padding(
                 padding: EdgeInsets.all(28),
                 child: Center(
-                  child: Text('No seasons yet. Create one to schedule a vote.',
+                  child: Text(
+                      'No seasons yet. Tap Create voting season to schedule a vote.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: C.muted)),
                 ),
               ),
+          ],
+        );
+        return Stack(
+          children: [
+            Positioned.fill(child: list),
+            Positioned(
+              right: 20,
+              bottom: 20,
+              child: SafeArea(
+                child: FloatingActionButton.extended(
+                  heroTag: 'create-season',
+                  onPressed: () => showElectionForm(context),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create voting season'),
+                ),
+              ),
+            ),
           ],
         );
       },

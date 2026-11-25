@@ -53,7 +53,10 @@ class _AdminShellState extends State<AdminShell> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, c) {
-        final wide = c.maxWidth >= 800 && c.maxHeight >= 480;
+        final landscape = c.maxWidth > c.maxHeight && c.maxWidth >= 560;
+        final wide = (c.maxWidth >= 800 && c.maxHeight >= 480) || landscape;
+        // Short screens (phones sideways) only fit the rail without labels under every icon.
+        final short = c.maxHeight < 480;
         final body = CenteredBody(
           maxWidth: 900,
           child: ListenableBuilder(
@@ -108,9 +111,11 @@ class _AdminShellState extends State<AdminShell> {
                     NavigationRail(
                       selectedIndex: i,
                       onDestinationSelected: (v) => setState(() => i = v),
-                      labelType: NavigationRailLabelType.all,
-                      minWidth: 92,
-                      groupAlignment: -0.85,
+                      labelType: short
+                          ? NavigationRailLabelType.selected
+                          : NavigationRailLabelType.all,
+                      minWidth: short ? 72 : 92,
+                      groupAlignment: short ? -1 : -0.85,
                       destinations: const [
                         NavigationRailDestination(
                             icon: Icon(Icons.dashboard_outlined),
@@ -133,7 +138,12 @@ class _AdminShellState extends State<AdminShell> {
                       ],
                     ),
                     VerticalDivider(width: 1, color: C.line),
-                    Expanded(child: body),
+                    Expanded(
+                        child: SafeArea(
+                            left: false,
+                            top: false,
+                            bottom: false,
+                            child: body)),
                   ],
                 )
               : body,

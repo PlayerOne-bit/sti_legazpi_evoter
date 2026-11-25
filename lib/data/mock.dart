@@ -765,6 +765,32 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Super admin only; the server refuses other admins.
+  Future<String?> updateStudent({
+    required int id,
+    required String studentNum,
+    required String fullName,
+    required int gradeLevelId,
+    required String schoolYear,
+    String section = '',
+    int? programId,
+  }) async {
+    try {
+      await Api.put('/api/admin/students/$id', {
+        'studentNum': studentNum.trim(),
+        'fullName': fullName.trim(),
+        'gradeLevelId': gradeLevelId,
+        'schoolYear': schoolYear,
+        'section': section.trim(),
+        'programId': programId,
+      });
+      await refreshAdmin();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    }
+  }
+
   Future<String?> setStudentActive(int id, bool active) async {
     try {
       await Api.put('/api/admin/students/$id/status', {'isActive': active});

@@ -414,7 +414,9 @@ class _AuthPageState extends State<AuthPage> {
               ),
               alignment: Alignment.centerLeft,
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(48, 48, 48, 56),
+                padding: c.maxHeight < 500
+                    ? const EdgeInsets.fromLTRB(28, 24, 28, 40)
+                    : const EdgeInsets.fromLTRB(48, 48, 48, 56),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
