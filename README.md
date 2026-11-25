@@ -3,6 +3,7 @@
 A voting app for student elections at STI College Legazpi, for **Android** and **Windows**. Students vote from their own phone or a school PC during a voting season. Admins run seasons, candidates and voter lists, and get the results the moment a season closes.
 
 - **Download:** https://sti-legazpi-evoter.netlify.app
+- **Tech stack, structure and services:** [DOCUMENTATION.md](DOCUMENTATION.md)
 - **Server and maintenance:** see the backend repo, [`sti_legazpi_evoter_backend`](https://github.com/PlayerOne-bit/sti_legazpi_evoter_backend)
 
 ## For students
