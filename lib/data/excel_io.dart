@@ -10,9 +10,11 @@ import 'api.dart';
 
 class ImportResult {
   final int studentsAdded;
+  final int studentsUpdated;
   final int candidatesAdded;
   final List<String> errors;
-  const ImportResult(this.studentsAdded, this.candidatesAdded, this.errors);
+  const ImportResult(this.studentsAdded, this.candidatesAdded, this.errors,
+      {this.studentsUpdated = 0});
 }
 
 class ExcelIo {
@@ -122,6 +124,7 @@ class ExcelIo {
               ? '${e['sheet']}: ${e['message']}'
               : '${e['sheet']} row ${e['row']}: ${e['message']}',
       ],
+      studentsUpdated: (j['studentsUpdated'] ?? 0) as int,
     );
   }
 }
@@ -140,7 +143,15 @@ Future<void> showImportResult(BuildContext context, ImportResult r) {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('${r.studentsAdded} students added'
+                  '${r.studentsUpdated > 0 ? ', ${r.studentsUpdated} returning students updated' : ''}'
                   '${r.candidatesAdded > 0 ? ', ${r.candidatesAdded} candidates added' : ''}.'),
+              if (r.studentsUpdated > 0) ...[
+                const SizedBox(height: 4),
+                Text(
+                    'Returning students got the new school year, level and section '
+                    'and are active again.',
+                    style: TextStyle(color: C.muted, fontSize: 12.5)),
+              ],
               if (r.errors.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Text('${r.errors.length} rows were skipped:',

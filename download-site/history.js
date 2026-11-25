@@ -2,6 +2,16 @@
 // Small fix releases are grouped with the version they came with. Keep in step with README.md.
 window.EVOTER_HISTORY = [
   {
+    versions: "1.0.6",
+    date: "November 25, 2026",
+    title: "One season per sign-in",
+    changes: [
+      "Signing in opens only the season your password belongs to.",
+      "Seasons with no candidates are removed automatically when voting opens.",
+      "Students from past school years are updated when they are added again for the new school year."
+    ]
+  },
+  {
     versions: "1.0.4 – 1.0.5",
     date: "November 25, 2026",
     title: "Seasons on the sign-in screen",

@@ -7,7 +7,7 @@ A voting app for student elections at STI College Legazpi, for **Android** and *
 
 ## For students
 
-1. **Get the app** from the download page and sign in with your **student number** and the **season password**. The password is emailed to `lastname.XXXXXX@legazpi.sti.edu.ph` or given by your adviser.
+1. **Get the app** from the download page and sign in with your **student number** and the **season password**. The password is emailed to `lastname.XXXXXX@legazpi.sti.edu.ph` or given by your adviser. Signing in opens only the season that password belongs to.
 2. **Check what's on:** the sign-in screen shows seasons voting now and coming up, with countdowns.
 3. **Vote:** pick one candidate per position, review your choices, then submit. You can vote once per season, and only while it is open.
 4. **See the results** after the season is closed and tallied.
@@ -21,11 +21,11 @@ Sign in with **Admin** on the sign-in screen.
 | Screen | What it does |
 |---|---|
 | **Dashboard** | The current season, a live countdown, and turnout. |
-| **Seasons** | Create a season: club, school year, voting dates and who can vote by grade level. The date calendar shows the chosen days in blue and days already used by another season circled in red. Upcoming seasons can be edited or deleted. Once voting starts a season is locked; end it with **Close season and tally votes**. |
+| **Seasons** | Create a season: club, school year, voting dates and who can vote by grade level. The date calendar shows the chosen days in blue and days already used by another season circled in red. Upcoming seasons can be edited or deleted. Once voting starts a season is locked; end it with **Close season and tally votes**. A season that still has no candidates when voting opens is deleted automatically. |
 | **Candidates** | Positions and candidates for a season, with photos (cropped square) and party lists. Editable until voting starts. |
 | **Party lists** | Names, colors and logos. |
 | **Voters** | The season's voter list with a password for each student. Send passwords by email one at a time or all at once, make a new password, or export the list to Excel. |
-| **Students** | Add students by hand or import from Excel, mark them inactive (graduated, transferred and so on), filter by school year and grade level. |
+| **Students** | Add students by hand or import from Excel, mark them inactive (graduated, transferred and so on), filter by school year and grade level. When a new school year starts (June), last year's students become inactive automatically. Importing them again (same student number, or same name with a new number) updates their school year, level and section and makes them active again. |
 | **History** | Closed seasons with winners and polls. **Run again** copies a season's setup into a new one. |
 | **Admins** | The super admin adds and removes other admins, and can turn on two-step sign-in by email. |
 
@@ -76,6 +76,11 @@ Add `-Mandatory` to force everyone to update. Always build both platforms, becau
 ## Update history
 
 Small fixes are grouped with the version they came with.
+
+### 1.0.6 · November 25, 2026
+- A student's sign-in opens only the season their password belongs to.
+- Seasons with no candidates are deleted automatically when voting opens, and the season card warns about it beforehand.
+- Students from past school years become inactive automatically. The Excel import updates returning students (same number, or same name with a new number) instead of skipping them.
 
 ### 1.0.4 – 1.0.5 · November 25, 2026
 - The sign-in screen shows seasons **voting now** and **coming up**, with live countdowns.

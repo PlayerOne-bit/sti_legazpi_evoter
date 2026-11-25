@@ -96,6 +96,31 @@ class ElectionCard extends StatelessWidget {
             Expanded(
                 child: Text('Open to ${state.levelsLabel(election.levelIds)}')),
           ]),
+          if (election.status == ElectionStatus.upcoming &&
+              election.candidateCount == 0) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: C.warnBg,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.warning_amber_rounded, size: 18, color: C.warnFg),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'No candidates yet. If it still has none when voting opens, '
+                      'this season is deleted automatically.',
+                      style: TextStyle(color: C.warnFg, fontSize: 12.5),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           if (onCandidates != null) ...[
             const SizedBox(height: 12),
             _CandidatesStrip(election: election, onTap: onCandidates!),
