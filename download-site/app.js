@@ -74,6 +74,16 @@
         return;
       }
       setStatus("Latest version " + latest.version, false);
+
+      // The hero button downloads straight away for Android and Windows visitors.
+      var mineInfo = preferred === "android" ? android : preferred === "windows" ? windows : null;
+      var hero = document.getElementById("hero-download");
+      if (hero && mineInfo) {
+        hero.href = mineInfo.url;
+        hero.setAttribute("download", "");
+        hero.querySelector("span").textContent =
+          "Download for " + (preferred === "android" ? "Android" : "Windows") + " · " + mineInfo.version;
+      }
       if (latest.notes) {
         notesText.textContent = latest.notes;
         notesBox.hidden = false;

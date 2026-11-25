@@ -3,104 +3,408 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>STI eVoter Download</title>
-  <meta name="description" content="Download the STI Legazpi eVoter app for Android and Windows.">
+  <title>STI eVoter</title>
+  <meta name="description" content="STI eVoter is the student election app of STI College Legazpi. Vote from your phone or a school PC, see live countdowns and get results the moment voting closes.">
   <meta name="theme-color" content="#0A4DA2">
+  <meta property="og:title" content="STI eVoter">
+  <meta property="og:description" content="Vote anywhere. Be faster, no waiting in line.">
+  <meta property="og:image" content="logo.jpg">
   <link rel="icon" href="logo.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="config.js"></script>
   <script src="app.js" defer></script>
   <script src="history.js" defer></script>
 </head>
 <body>
-  <header class="hero">
-    <div class="wrap hero-inner">
-      <img class="logo" src="logo.jpg" alt="" width="64" height="64">
-      <div>
-        <p class="eyebrow">STI College Legazpi</p>
-        <h1>STI eVoter</h1>
-        <p class="tagline">Vote anywhere. Be faster, no waiting in line.</p>
+  <a class="skip" href="#download">Skip to download</a>
+
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="#top">
+        <img src="logo.jpg" alt="" width="36" height="36">
+        <span>STI eVoter</span>
+      </a>
+      <nav class="nav" aria-label="Sections">
+        <a href="#features">Features</a>
+        <a href="#how">How it works</a>
+        <a href="#docs">Guide</a>
+        <a href="#history">Updates</a>
+      </nav>
+      <a class="nav-cta" href="#download">Download</a>
+    </div>
+  </header>
+
+  <section class="hero" id="top">
+    <div class="hero-glow" aria-hidden="true"></div>
+    <div class="wrap hero-grid">
+      <div class="hero-copy reveal">
+        <p class="eyebrow">STI College Legazpi · Student elections</p>
+        <h1>Vote anywhere.<br><span>No waiting in line.</span></h1>
+        <p class="lead">STI eVoter is the official election app for STI Legazpi clubs and the student council. Cast your ballot from your phone or a school PC in under a minute, and see the winners the moment voting closes.</p>
+        <div class="hero-actions">
+          <a class="btn btn-yellow" id="hero-download" href="#download">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 2h14v2H5v-2z"/></svg>
+            <span>Download the app</span>
+          </a>
+          <a class="btn btn-ghost" href="#how">See how it works</a>
+        </div>
+        <p class="status" id="status" role="status">Checking the latest version...</p>
+        <ul class="trust">
+          <li><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>Secret ballot</li>
+          <li><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 11h-5v-2h3V6h2v7z"/></svg>Server-timed seasons</li>
+          <li><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/></svg>Instant results</li>
+        </ul>
+      </div>
+
+      <div class="phone-wrap reveal" aria-hidden="true">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="screen">
+            <div class="s-bar">
+              <span class="s-title">Your ballot</span>
+              <span class="s-pill">Closes in 1d 4h</span>
+            </div>
+            <div class="s-steps"><i class="done"></i><i class="on"></i><i></i><i></i></div>
+            <p class="s-label">Vice President · choose one</p>
+            <div class="s-cand">
+              <span class="s-av" style="background:#0A4DA2">AR</span>
+              <span class="s-name">Reyes, Ana<small>Team Unity</small></span>
+              <span class="s-radio"></span>
+            </div>
+            <div class="s-cand picked">
+              <span class="s-av" style="background:#1E8E5A">MC</span>
+              <span class="s-name">Cruz, Marco<small>Bagong Lakas</small></span>
+              <span class="s-radio"></span>
+            </div>
+            <div class="s-cand">
+              <span class="s-av" style="background:#8A6500">JS</span>
+              <span class="s-name">Santos, Jamie<small>Independent</small></span>
+              <span class="s-radio"></span>
+            </div>
+            <div class="s-next">Next</div>
+          </div>
+        </div>
+        <div class="float-card fc-1">
+          <span class="dot"></span>
+          <div><b>Voting now</b><small>Student Council 2026-2027</small></div>
+        </div>
+        <div class="float-card fc-2">
+          <b>78%</b>
+          <small>turnout so far</small>
+        </div>
       </div>
     </div>
     <div class="accent"></div>
-  </header>
+  </section>
 
-  <main class="wrap">
-    <section class="intro reveal">
-      <h2>Get the app</h2>
-      <p>Sign in with your student number and the season password emailed to your school address (or given by your adviser). The app updates itself when a new version comes out.</p>
-      <p class="status" id="status" role="status">Checking the latest version...</p>
+  <main>
+    <section class="strip">
+      <div class="wrap strip-grid">
+        <div><b>Android &amp; Windows</b><span>Phones, tablets and school PCs</span></div>
+        <div><b>1 vote</b><span>per student, per season</span></div>
+        <div><b>&lt; 1 minute</b><span>to cast a full ballot</span></div>
+        <div><b>Auto-updates</b><span>from inside the app</span></div>
+      </div>
     </section>
 
-    <section class="cards">
-      <article class="card reveal" id="card-android" data-platform="android">
-        <div class="card-head">
-          <span class="icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="28" height="28"><path fill="currentColor" d="M17.6 9.48l1.84-3.18a.39.39 0 00-.68-.39l-1.86 3.22A11.4 11.4 0 0012 8.1c-1.77 0-3.4.37-4.9 1.03L5.24 5.91a.39.39 0 00-.68.39L6.4 9.48A10.8 10.8 0 001 18h22a10.8 10.8 0 00-5.4-8.52zM7 15.25a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5zm10 0a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5z"/></svg>
-          </span>
-          <div>
-            <h3>Android</h3>
-            <p class="meta" data-field="meta">Phones and tablets</p>
-          </div>
-          <span class="badge" data-field="badge" hidden>Recommended for you</span>
+    <section class="section" id="features">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="kicker">Features</p>
+          <h2>Everything an election needs, in one app</h2>
+          <p class="sub">Students get a fast, clear ballot. Organizers get seasons, candidates, voter lists and results without paper or spreadsheets.</p>
         </div>
-        <a class="btn" data-field="button" href="#" aria-disabled="true">
-          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 2h14v2H5v-2z"/></svg>
-          <span>Download APK</span>
-        </a>
-        <details class="how">
-          <summary>How to install</summary>
-          <ol>
-            <li>Tap <b>Download APK</b> and open the file when it finishes.</li>
-            <li>If Android asks, allow your browser or Files app to <b>install unknown apps</b>.</li>
-            <li>Tap <b>Install</b>, then open <b>STI eVoter</b>.</li>
-          </ol>
-        </details>
-      </article>
 
-      <article class="card reveal" id="card-windows" data-platform="windows">
-        <div class="card-head">
-          <span class="icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="26" height="26"><path fill="currentColor" d="M3 5.1l7.4-1v7.2H3V5.1zm8.4-1.15L21 2.5v8.8h-9.6V3.95zM3 12.7h7.4v7.2L3 18.9v-6.2zm8.4 0H21v8.8l-9.6-1.35V12.7z"/></svg>
-          </span>
-          <div>
-            <h3>Windows</h3>
-            <p class="meta" data-field="meta">Windows 10 and 11, 64-bit</p>
-          </div>
-          <span class="badge" data-field="badge" hidden>Recommended for you</span>
+        <h3 class="group-title"><span class="chip">For students</span></h3>
+        <div class="features">
+          <article class="feature">
+            <span class="f-icon"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M18 13h-.68l-2 2h1.91L19 17H5l1.78-2h2.05l-2-2H6l-3 3v4c0 1.1.89 2 1.99 2H19a2 2 0 002-2v-4l-3-3zm-1-5.05l-4.95 4.95-3.54-3.54 4.95-4.95L17 7.95zm-4.24-5.66L6.39 8.66a.996.996 0 000 1.41l4.95 4.95c.39.39 1.02.39 1.41 0l6.36-6.36a.996.996 0 000-1.41L14.16 2.3a.975.975 0 00-1.4-.01z"/></svg></span>
+            <h4>A ballot that guides you</h4>
+            <p>One position per page with a step bar on top. Pick a candidate, review every choice on one screen, then submit.</p>
+          </article>
+          <article class="feature">
+            <span class="f-icon"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42A8.96 8.96 0 0012 4a9 9 0 109 9c0-2.12-.74-4.07-1.97-5.61zM12 20a7 7 0 110-14 7 7 0 010 14z"/></svg></span>
+            <h4>Live countdowns</h4>
+            <p>See which seasons are voting now and which open next, right on the sign-in screen. Times come from the server, not your phone's clock.</p>
+          </article>
+          <article class="feature">
+            <span class="f-icon"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12.65 10A5.99 5.99 0 007 6c-3.31 0-6 2.69-6 6s2.69 6 6 6a5.99 5.99 0 005.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg></span>
+            <h4>One password per season</h4>
+            <p>Each election has its own password, emailed to your school address. Signing in opens only the season it belongs to.</p>
+          </article>
+          <article class="feature">
+            <span class="f-icon"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg></span>
+            <h4>Results right away</h4>
+            <p>After you vote, follow the tally. When the season closes, winners and full polls appear instantly.</p>
+          </article>
+          <article class="feature">
+            <span class="f-icon"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zM12 18a6 6 0 110-12 6 6 0 010 12zm0-10a4 4 0 100 8 4 4 0 000-8z"/></svg></span>
+            <h4>Light and dark mode</h4>
+            <p>Follows your device, or switch it yourself. Works on phones held upright or sideways, and on PCs.</p>
+          </article>
+          <article class="feature">
+            <span class="f-icon"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1a6.88 6.88 0 000 9.8c2.73 2.7 7.15 2.7 9.88 0 1.36-1.35 2.04-2.92 2.04-4.9H21c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.53-9.11-.02-12.58a8.987 8.987 0 0112.65 0L21 3v7.12z"/></svg></span>
+            <h4>Updates itself</h4>
+            <p>When a new version is out, the sign-in screen offers an update. No need to come back to this page.</p>
+          </article>
         </div>
-        <a class="btn" data-field="button" href="#" aria-disabled="true">
-          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 2h14v2H5v-2z"/></svg>
-          <span>Download for Windows</span>
-        </a>
-        <details class="how">
-          <summary>How to install</summary>
-          <ol>
-            <li>Download the .zip and <b>Extract all</b> to a folder, for example Documents\STI eVoter.</li>
-            <li>Open <b>sti_legazpi_evoter.exe</b>.</li>
-            <li>If Windows SmartScreen appears, choose <b>More info &gt; Run anyway</b>.</li>
-          </ol>
-        </details>
-      </article>
+
+        <h3 class="group-title"><span class="chip chip-yellow">For organizers</span></h3>
+        <div class="features">
+          <article class="feature">
+            <span class="f-icon y"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2zm0 16H5V9h14v11zM7 11h5v5H7z"/></svg></span>
+            <h4>Seasons on a calendar</h4>
+            <p>Pick the voting days on one calendar. Days used by another season are marked in red, so elections never overlap.</p>
+          </article>
+          <article class="feature">
+            <span class="f-icon y"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></span>
+            <h4>Candidates and party lists</h4>
+            <p>Add positions and candidates in one step, with cropped photos, party list logos and colors, and ballot order by rank.</p>
+          </article>
+          <article class="feature">
+            <span class="f-icon y"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></span>
+            <h4>Voter lists and email</h4>
+            <p>Every season builds its voter list by grade level. Send each student their password by email, one at a time or all at once.</p>
+          </article>
+          <article class="feature">
+            <span class="f-icon y"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></span>
+            <h4>Excel in, Excel out</h4>
+            <p>Import students from a spreadsheet; returning students are updated for the new school year. Export voter lists and results.</p>
+          </article>
+          <article class="feature">
+            <span class="f-icon y"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0011 15.9V19H7v2h10v-2h-4v-3.1a5.01 5.01 0 003.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg></span>
+            <h4>Live turnout, instant tally</h4>
+            <p>Watch turnout climb on the dashboard. Close the season and the winners are counted and saved to History.</p>
+          </article>
+          <article class="feature">
+            <span class="f-icon y"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg></span>
+            <h4>Built-in safeguards</h4>
+            <p>Seasons lock once voting starts, admin roles with a super admin, optional two-step sign-in, and limits on sign-in attempts.</p>
+          </article>
+        </div>
+      </div>
     </section>
 
-    <section class="notes reveal" id="notes" hidden>
-      <h2>What's new</h2>
-      <p id="notes-text"></p>
+    <section class="section alt" id="how">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="kicker">How it works</p>
+          <h2>From setup to winners in four steps</h2>
+        </div>
+        <ol class="steps">
+          <li class="step">
+            <span class="num">1</span>
+            <h4>Organizers set up a season</h4>
+            <p>Club, school year, voting days, who can vote, and the candidates for each position.</p>
+          </li>
+          <li class="step">
+            <span class="num">2</span>
+            <h4>Students get their password</h4>
+            <p>Each student receives a password for that season at <b>lastname.XXXXXX@legazpi.sti.edu.ph</b>.</p>
+          </li>
+          <li class="step">
+            <span class="num">3</span>
+            <h4>Vote while it's open</h4>
+            <p>Sign in with your student number and that password, pick one candidate per position, and submit.</p>
+          </li>
+          <li class="step">
+            <span class="num">4</span>
+            <h4>Results the moment it closes</h4>
+            <p>The tally is counted on the server and the winners are shown to everyone right away.</p>
+          </li>
+        </ol>
+      </div>
     </section>
 
-    <section class="history reveal" aria-labelledby="history-heading">
-      <h2 id="history-heading">Version history</h2>
-      <p class="history-lead">Small fixes are grouped with the version they came with.</p>
-      <div id="history-list"></div>
+    <section class="section" id="download">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="kicker">Download</p>
+          <h2>Get STI eVoter</h2>
+          <p class="sub">Free for STI Legazpi students and staff. Only download the app from this page.</p>
+        </div>
+
+        <div class="cards">
+          <article class="card reveal" id="card-android" data-platform="android">
+            <div class="card-head">
+              <span class="icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="28" height="28"><path fill="currentColor" d="M17.6 9.48l1.84-3.18a.39.39 0 00-.68-.39l-1.86 3.22A11.4 11.4 0 0012 8.1c-1.77 0-3.4.37-4.9 1.03L5.24 5.91a.39.39 0 00-.68.39L6.4 9.48A10.8 10.8 0 001 18h22a10.8 10.8 0 00-5.4-8.52zM7 15.25a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5zm10 0a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5z"/></svg>
+              </span>
+              <div>
+                <h3>Android</h3>
+                <p class="meta" data-field="meta">Phones and tablets</p>
+              </div>
+              <span class="badge" data-field="badge" hidden>Recommended for you</span>
+            </div>
+            <a class="btn" data-field="button" href="#" aria-disabled="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 2h14v2H5v-2z"/></svg>
+              <span>Download APK</span>
+            </a>
+            <details class="how">
+              <summary>How to install</summary>
+              <ol>
+                <li>Tap <b>Download APK</b> and open the file when it finishes.</li>
+                <li>If Android asks, allow your browser or Files app to <b>install unknown apps</b>.</li>
+                <li>Tap <b>Install</b>, then open <b>STI eVoter</b>.</li>
+              </ol>
+            </details>
+          </article>
+
+          <article class="card reveal" id="card-windows" data-platform="windows">
+            <div class="card-head">
+              <span class="icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="26" height="26"><path fill="currentColor" d="M3 5.1l7.4-1v7.2H3V5.1zm8.4-1.15L21 2.5v8.8h-9.6V3.95zM3 12.7h7.4v7.2L3 18.9v-6.2zm8.4 0H21v8.8l-9.6-1.35V12.7z"/></svg>
+              </span>
+              <div>
+                <h3>Windows</h3>
+                <p class="meta" data-field="meta">Windows 10 and 11, 64-bit</p>
+              </div>
+              <span class="badge" data-field="badge" hidden>Recommended for you</span>
+            </div>
+            <a class="btn" data-field="button" href="#" aria-disabled="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 2h14v2H5v-2z"/></svg>
+              <span>Download for Windows</span>
+            </a>
+            <details class="how">
+              <summary>How to install</summary>
+              <ol>
+                <li>Download the .zip and <b>Extract all</b> to a folder, for example Documents\STI eVoter.</li>
+                <li>Open <b>sti_legazpi_evoter.exe</b>.</li>
+                <li>If Windows SmartScreen appears, choose <b>More info &gt; Run anyway</b>.</li>
+              </ol>
+            </details>
+          </article>
+        </div>
+
+        <div class="notes reveal" id="notes" hidden>
+          <h3>What's new in this version</h3>
+          <p id="notes-text"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt" id="docs">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="kicker">Guide</p>
+          <h2>Using STI eVoter</h2>
+          <p class="sub">Short answers for students and organizers. Tap a question to open it.</p>
+        </div>
+
+        <div class="docs">
+          <div class="doc-col">
+            <h3 class="doc-title">Students</h3>
+            <details class="qa" open>
+              <summary>How do I sign in?</summary>
+              <p>Choose <b>Student</b> on the sign-in screen, enter your student number, and the season password. The password is emailed to <b>lastname.XXXXXX@legazpi.sti.edu.ph</b>, where XXXXXX is the last 6 digits of your student number. Your adviser can also give it to you.</p>
+            </details>
+            <details class="qa">
+              <summary>Why doesn't last season's password work?</summary>
+              <p>Every season has its own password, and signing in opens only the season it belongs to. Use the newest password you received.</p>
+            </details>
+            <details class="qa">
+              <summary>How do I vote?</summary>
+              <p>Pick one candidate for each position, then tap <b>Next</b>. On the last page, review your choices and tap <b>Submit ballot</b>. You can vote once per season, and only while it's open.</p>
+            </details>
+            <details class="qa">
+              <summary>Is my vote secret?</summary>
+              <p>Yes. The server records <i>that</i> you voted separately from <i>what</i> you chose. Ballots carry no student number, so nobody can match a ballot to a student.</p>
+            </details>
+            <details class="qa">
+              <summary>It says I'm not on the voter list.</summary>
+              <p>Each season is open to certain grade levels only. If you should be able to vote, ask the organizers to check your grade level and that your record is active for this school year.</p>
+            </details>
+            <details class="qa">
+              <summary>When can I see the results?</summary>
+              <p>After you vote you can follow the live tally. The final winners appear as soon as the organizers close the season.</p>
+            </details>
+          </div>
+
+          <div class="doc-col">
+            <h3 class="doc-title">Organizers</h3>
+            <details class="qa" open>
+              <summary>How do I run an election?</summary>
+              <p>Sign in as <b>Admin</b>. In <b>Seasons</b>, tap <b>Create voting season</b>, choose the club, school year, voting days and grade levels. Then open <b>Candidates</b> on the season card and add each candidate; create positions right there with <b>New position</b>.</p>
+            </details>
+            <details class="qa">
+              <summary>How do students get their passwords?</summary>
+              <p>Open <b>Voters</b> on the season card. Send passwords by email to everyone at once or one by one, make a new password for a student, or export the list to Excel to print.</p>
+            </details>
+            <details class="qa">
+              <summary>Can I change a season after voting starts?</summary>
+              <p>No. Once voting opens the season is locked so the rules can't change mid-vote. To end it early, use <b>Close season and tally votes</b>. A season that still has no candidates when voting opens is removed automatically.</p>
+            </details>
+            <details class="qa">
+              <summary>How do I add students?</summary>
+              <p>In <b>Students</b>, add them one by one or import an Excel file (download the template from the Excel menu). Student numbers and full names must be unique. At the start of each school year, last year's students become inactive until they are imported again.</p>
+            </details>
+            <details class="qa">
+              <summary>Where are past elections?</summary>
+              <p>In <b>History</b>, with winners and full polls. <b>Run again</b> copies a season's setup into a new one for the next school year.</p>
+            </details>
+          </div>
+
+          <div class="doc-col">
+            <h3 class="doc-title">Troubleshooting</h3>
+            <details class="qa">
+              <summary>Windows says "Windows protected your PC".</summary>
+              <p>That's SmartScreen, shown for apps that aren't sold in a store. Choose <b>More info</b>, then <b>Run anyway</b>.</p>
+            </details>
+            <details class="qa">
+              <summary>Android won't install the APK.</summary>
+              <p>Allow your browser or Files app to <b>install unknown apps</b> when Android asks. If an older copy came from somewhere else, uninstall it first.</p>
+            </details>
+            <details class="qa">
+              <summary>"Cannot reach the server."</summary>
+              <p>Check your internet connection. The first sign-in after a quiet period can take up to a minute while the server wakes up; try again.</p>
+            </details>
+            <details class="qa">
+              <summary>How do I update the app?</summary>
+              <p>Open the app. When a new version is out, the sign-in screen shows <b>Update</b>. You can also download it again here; your data lives on the server, so nothing is lost.</p>
+            </details>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="history">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="kicker">Updates</p>
+          <h2>Version history</h2>
+          <p class="sub">Small fixes are grouped with the version they came with.</p>
+        </div>
+        <div id="history-list" class="history-list"></div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="wrap cta-inner reveal">
+        <div>
+          <h2>Ready for election day?</h2>
+          <p>Install STI eVoter now, so you're set when your season opens.</p>
+        </div>
+        <a class="btn btn-yellow" href="#download">Download the app</a>
+      </div>
     </section>
   </main>
 
-  <footer class="wrap footer">
-    <p>STI College Legazpi student elections. Only download the app from this page.</p>
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <div class="brand">
+        <img src="logo.jpg" alt="" width="32" height="32">
+        <span>STI eVoter</span>
+      </div>
+      <p>Student elections of STI College Legazpi. Only download the app from this page.</p>
+      <nav aria-label="Footer">
+        <a href="#features">Features</a>
+        <a href="#docs">Guide</a>
+        <a href="#download">Download</a>
+      </nav>
+    </div>
   </footer>
 </body>
 </html>
