@@ -77,8 +77,9 @@ Add `-Mandatory` to force everyone to update. Always build both platforms, becau
 
 Small fixes are grouped with the version they came with.
 
-### 1.0.7 · November 25, 2026
-- Works on phones held sideways: the admin menu moves to the side, and dialogs and the photo cropper fit the screen.
+### 1.0.7 – 1.0.8 · November 25, 2026
+- Works on phones held sideways: the admin menu moves to the side, and dialogs and the photo cropper fit the screen. On the Students screen the search and filters scroll away with the list, so the students get the full height.
+- The note about season passwords on the Students screen wraps instead of being cut off.
 - The super admin can edit students. Student numbers and full names must be unique.
 - New positions are created right in the Add candidate dialog.
 - **Create voting season** is now a floating button that stays clear of the season list.
