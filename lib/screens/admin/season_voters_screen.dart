@@ -38,6 +38,8 @@ class _SeasonVotersScreenState extends State<SeasonVotersScreen> {
   final Set<int> _sending = {};
   MailJob? _job;
   Timer? _poll;
+  Timer? _countdown;
+  DateTime _now = Api.now;
 
   @override
   void initState() {
@@ -49,14 +51,17 @@ class _SeasonVotersScreenState extends State<SeasonVotersScreen> {
   @override
   void dispose() {
     _poll?.cancel();
+    _countdown?.cancel();
     super.dispose();
   }
 
   Future<void> _checkJob() async {
     try {
       final j = await state.emailAllStatus(widget.electionId);
-      if (!mounted || (j.total == 0 && !j.running)) return;
+      if (!mounted || (j.total == 0 && !j.running && j.nextAvailableAt == null))
+        return;
       setState(() => _job = j);
+      _syncCountdown();
       if (j.running) _startPolling();
     } on ApiException {
       return;
@@ -70,12 +75,30 @@ class _SeasonVotersScreenState extends State<SeasonVotersScreen> {
         final j = await state.emailAllStatus(widget.electionId);
         if (!mounted) return;
         setState(() => _job = j);
+        _syncCountdown();
         if (!j.running) {
           _poll?.cancel();
           _load();
         }
       } on ApiException {
         return;
+      }
+    });
+  }
+
+  void _syncCountdown() {
+    if (_job?.nextAvailableAt == null) {
+      _countdown?.cancel();
+      _countdown = null;
+      return;
+    }
+    if (_countdown?.isActive == true) return;
+    _countdown = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return timer.cancel();
+      setState(() => _now = Api.now);
+      if (!_now.isBefore(_job!.nextAvailableAt!)) {
+        timer.cancel();
+        _countdown = null;
       }
     });
   }
@@ -190,10 +213,80 @@ class _SeasonVotersScreenState extends State<SeasonVotersScreen> {
           onlyUnsent: onlyUnsent);
       if (!mounted) return;
       setState(() => _job = job);
+      _syncCountdown();
       _startPolling();
     } on ApiException catch (e) {
       _toast(e.message);
     }
+  }
+
+  Widget _emailProgressCard(SeasonVoters d) {
+    final eligible = d.items.where((v) => v.email != null).length;
+    final sent = d.items
+        .where((v) => v.email != null && v.passwordSentAt != null)
+        .length;
+    final remaining = eligible - sent;
+    final ratio = eligible == 0 ? 0.0 : sent / eligible;
+    final next = _job?.nextAvailableAt;
+    final wait = next == null ? null : next.difference(_now);
+    String countdown(Duration duration) {
+      final seconds = duration.inSeconds.clamp(0, 999999);
+      final hours = seconds ~/ 3600;
+      final minutes = (seconds % 3600) ~/ 60;
+      final secs = seconds % 60;
+      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: cardBox(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Icon(Icons.mark_email_read_outlined, color: C.blue),
+            const SizedBox(width: 9),
+            Expanded(
+                child: Text('Season password emails',
+                    style: const TextStyle(fontWeight: FontWeight.w700))),
+            Text('$sent / $eligible',
+                style: TextStyle(color: C.muted, fontWeight: FontWeight.w700)),
+          ]),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+                value: ratio,
+                minHeight: 8,
+                color: C.blue,
+                backgroundColor: C.tint),
+          ),
+          const SizedBox(height: 7),
+          Text(
+              '$remaining remaining${eligible < d.items.length ? ' · ${d.items.length - eligible} without a school email' : ''}',
+              style: TextStyle(color: C.muted, fontSize: 12.5)),
+          if (next != null && remaining > 0) ...[
+            const SizedBox(height: 9),
+            Row(children: [
+              Icon(Icons.schedule,
+                  size: 17,
+                  color: wait != null && wait.inSeconds > 0 ? C.danger : C.ok),
+              const SizedBox(width: 7),
+              Expanded(
+                  child: Text(
+                wait != null && wait.inSeconds > 0
+                    ? 'Next batch available in ${countdown(wait)}'
+                    : 'Next batch is available now. Send all to continue with remaining students.',
+                style: TextStyle(
+                    fontSize: 12.5,
+                    color: wait != null && wait.inSeconds > 0 ? C.danger : C.ok,
+                    fontWeight: FontWeight.w600),
+              )),
+            ]),
+          ],
+        ],
+      ),
+    );
   }
 
   Widget _jobCard(MailJob j) {
@@ -725,6 +818,8 @@ class _SeasonVotersScreenState extends State<SeasonVotersScreen> {
                         ),
                         if (!d.closed) ...[
                           const SizedBox(height: 10),
+                          FadeSlideIn(child: _emailProgressCard(d)),
+                          const SizedBox(height: 10),
                           FadeSlideIn(
                             index: 1,
                             child: Pressable(
@@ -746,7 +841,7 @@ class _SeasonVotersScreenState extends State<SeasonVotersScreen> {
                             Padding(
                               padding: const EdgeInsets.only(top: 6),
                               child: Text(
-                                  'Email is not set up on the server yet (Smtp settings).',
+                                  'Gmail email is not configured on the server yet.',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                       color: C.muted, fontSize: 12.5)),

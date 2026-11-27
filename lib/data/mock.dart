@@ -146,8 +146,9 @@ class MailJob {
   final int skipped;
   final DateTime? finishedAt;
   final String? lastError;
+  final DateTime? nextAvailableAt;
   const MailJob(this.running, this.total, this.sent, this.failed, this.skipped,
-      this.finishedAt, this.lastError);
+      this.finishedAt, this.lastError, this.nextAvailableAt);
   int get done => sent + failed + skipped;
   factory MailJob.fromJson(Map<String, dynamic> j) => MailJob(
         j['running'] == true,
@@ -157,6 +158,7 @@ class MailJob {
         j['skipped'] ?? 0,
         j['finishedAt'] == null ? null : parseUtc(j['finishedAt']),
         j['lastError'],
+        j['nextAvailableAt'] == null ? null : parseUtc(j['nextAvailableAt']),
       );
 }
 
