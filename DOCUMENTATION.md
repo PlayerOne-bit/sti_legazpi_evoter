@@ -29,7 +29,7 @@ flowchart LR
     end
     GH[GitHub Releases<br/>APK, Windows zip, version.json]
     NL[Netlify<br/>download page]
-    MJ[Mailjet SMTP]
+    GM[Gmail SMTP]
     UR[UptimeRobot]
 
     A -- HTTPS + JWT --> API
@@ -39,7 +39,7 @@ flowchart LR
     API --> DB
     API -- reads version.json --> GH
     A & W -- download updates --> GH
-    API -- season passwords,<br/>sign-in codes --> MJ
+    API -- season passwords,<br/>sign-in codes --> GM
     UR -- /api/health every 5 min --> API
 ```
 
@@ -74,7 +74,7 @@ flowchart LR
 | Authentication | JWT bearer tokens (`Microsoft.AspNetCore.Authentication.JwtBearer`). Roles: `student` and `admin`; student tokens carry the one season they may open. |
 | Passwords | Admin passwords: ASP.NET Identity `PasswordHasher` (salted hashes). Season passwords: encrypted with ASP.NET **Data Protection**, keys kept in the database (`DataProtection.EntityFrameworkCore`). |
 | Excel | **ClosedXML** (writing templates, voter lists, results) and **ExcelDataReader** (reading `.xls` and `.xlsx` imports) |
-| Email | .NET SMTP client to Mailjet |
+| Email | .NET SMTP client to Gmail, with a persistent rolling-window send cap |
 | Protection | Rate limiting on sign-in (10 attempts per minute per address), CORS limited to the download page, forwarded headers for the proxy |
 | Packaging | **Docker** (`Dockerfile`, .NET 10 SDK to build, ASP.NET runtime to run, time zone Asia/Manila) |
 | Local tools | Visual Studio 2026, user secrets, `StiEvoter.Api.http` request file |
@@ -105,8 +105,7 @@ All services run on free plans.
 | **Neon** | PostgreSQL database | Serverless PostgreSQL 18 in AWS Singapore, branch `production`. Sleeps after about 5 minutes without queries and wakes on the next one. Holds all data, uploaded photos (`StoredFiles`) and encryption keys (`DataProtectionKeys`). |
 | **Netlify** | Download page | Publishes `download-site/` from this repo on every push (`netlify.toml`). Sets security headers. |
 | **GitHub Releases** | App files | Each release (`v1.0.8` and so on) holds the APK, the Windows zip and `version.json` with versions, sizes and SHA-256 hashes. The API reads `version.json` from the newest release. |
-| **Mailjet** | Email | SMTP on port 2525 (Render's free plan blocks the usual ports). Sends season passwords to `lastname.XXXXXX@legazpi.sti.edu.ph` and admin sign-in codes. Requires a sender on a verified domain. |
-| **Cloudflare** | Domain email (planned) | Email Routing to forward replies for the sender domain to Gmail, and DNS records (SPF, DKIM, DMARC) for Mailjet. |
+| **Gmail** | Email | SMTP at `smtp.gmail.com:587`, authenticated with an App Password for `stilegazpievoter@gmail.com`. Sends season passwords and admin sign-in codes. The API logs sent-message timestamps and enforces a maximum of 500 messages per rolling 24 hours. |
 | **UptimeRobot** | Keep-awake | Calls `/api/health` every 5 minutes so the free Render service does not sleep. It does not touch the database, so Neon can still sleep. |
 
 ### Free-plan limits that shaped the design
@@ -114,7 +113,8 @@ All services run on free plans.
 - **Render has no lasting disk**, so photos and keys are stored in PostgreSQL instead of files.
 - **Render sleeps after 15 minutes**, so UptimeRobot pings a health check that skips the database.
 - **Neon counts compute hours**, so cleanup jobs run only before real requests (at most once a minute) rather than on a timer that would keep the database awake.
-- **Mailjet free** allows about 200 emails a day; sending stops after 5 failures in a row and reports why.
+- **Gmail personal accounts** may reach a 500-message daily limit. The API pauses bulk sends at the tracked limit; admins can resume later and only not-yet-emailed students are selected. Messages sent outside the app also count at Google.
+- **Render Free blocks SMTP ports 465 and 587**, so Gmail SMTP needs a paid Render service or another host that allows outbound SMTP.
 
 ---
 
@@ -190,7 +190,7 @@ sti_legazpi_evoter_backend/
 
 **Student sign-in and voting**
 1. The admin creates a season. The server builds its voter list from active students in the chosen grade levels and gives each a random password.
-2. Passwords are emailed (Mailjet) or exported to Excel.
+2. Passwords are emailed (Gmail SMTP) or exported to Excel.
 3. The student signs in with student number and password. The server finds the season that password belongs to and issues a token for that season only.
 4. The ballot shows one position per page. On submit, the server checks the season is open, the student is eligible and has not voted, and there is one choice per position. It saves the "voted" mark and the anonymous ballot together in one database save.
 5. When the admin closes the season, the server tallies, stores the winners in History, and the results appear in the app.
@@ -230,11 +230,12 @@ sti_legazpi_evoter_backend/
 | Nov 23 | Dark mode, school years, active/inactive students, party lists with colors and logos, ranked positions |
 | Nov 24 | Production setup: Docker, in-app updates, Netlify download page |
 | Nov 25 | Hosting on Render + Neon, email through Mailjet, GitHub Releases. Versions 1.0.0 to 1.0.8: app icon, seasons on the sign-in screen, range calendar, locked open seasons, season-bound sign-in, automatic housekeeping, landscape layouts, student editing |
+| Nov 27 | Switched backend email configuration to Gmail SMTP with App Passwords and persistent 500-message rolling-window tracking |
 
 **Approach**
 - **UI first.** The screens were designed and tested with sample data before the server existed, so the flows could be tried early. The state class still lives in `lib/data/mock.dart` from that stage, though it now talks to the API.
 - **Rules on the server.** Once the API was added, every check (one vote, open season, eligibility, locking) moved to the server so the app cannot be used to cheat.
-- **Free hosting by design.** Render, Neon, Netlify, GitHub Releases and Mailjet were chosen so the system runs at no cost. Their limits shaped the design (see section 3).
+- **Low-cost hosting by design.** Render, Neon, Netlify and GitHub Releases have free options. Gmail SMTP requires a host that allows port 587; Render's free plan does not, so email requires a paid Render instance or a different host (see section 3).
 - **Small, frequent releases.** Each change is pushed and released through one script; installed apps update themselves from the sign-in screen.
 
 The full list of changes per version is in the **Update history** in [README.md](README.md) and on the download page.
