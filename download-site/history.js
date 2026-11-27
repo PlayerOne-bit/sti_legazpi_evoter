@@ -2,6 +2,16 @@
 // Small fix releases are grouped with the version they came with. Keep in step with README.md.
 window.EVOTER_HISTORY = [
   {
+    versions: "1.0.9",
+    date: "November 27, 2026",
+    title: "Season email progress",
+    changes: [
+      "Track emailed passwords and remaining students in the season voter list.",
+      "A live countdown shows when the next Gmail batch can run after reaching the rolling 24-hour limit.",
+      "Continue with students who have not received their password yet, without resending the previous batch."
+    ]
+  },
+  {
     versions: "1.0.7 – 1.0.8",
     date: "November 25, 2026",
     title: "Landscape and student editing",
