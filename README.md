@@ -78,6 +78,10 @@ Add `-Mandatory` to force everyone to update. Always build both platforms, becau
 
 Small fixes are grouped with the version they came with.
 
+### 1.0.9 · November 27, 2026
+- Season voter list shows password-email progress, the number remaining, and students without a valid school email.
+- When Gmail's rolling 24-hour send limit pauses a large batch, a live countdown shows when organizers can continue. The next batch skips students already emailed.
+
 ### 1.0.7 – 1.0.8 · November 25, 2026
 - Works on phones held sideways: the admin menu moves to the side, and dialogs and the photo cropper fit the screen. On the Students screen the search and filters scroll away with the list, so the students get the full height.
 - The note about season passwords on the Students screen wraps instead of being cut off.
