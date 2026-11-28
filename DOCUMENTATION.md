@@ -6,7 +6,7 @@ STI eVoter is the student election system of STI College Legazpi. It has three p
 |---|---|---|
 | **App** | [`sti_legazpi_evoter`](https://github.com/PlayerOne-bit/sti_legazpi_evoter) (this repo) | Flutter app for Android and Windows, used by both students and admins. |
 | **Server** | [`sti_legazpi_evoter_backend`](https://github.com/PlayerOne-bit/sti_legazpi_evoter_backend) | ASP.NET Core Web API with a PostgreSQL database. All rules and data live here. |
-| **Download page** | `download-site/` in this repo | Static landing page at https://sti-legazpi-evoter.netlify.app |
+| **Download page** | `download-site/` in this repo | Static landing page deployed to Cloudflare Workers with Static Assets. Its assigned `workers.dev` URL is shown in the Cloudflare dashboard. |
 
 For day-to-day use and releasing, see [README.md](README.md). For running and maintaining the server, see the backend's README.
 
@@ -28,7 +28,7 @@ flowchart LR
         DB[(PostgreSQL 18)]
     end
     GH[GitHub Releases<br/>APK, Windows zip, version.json]
-    NL[Netlify<br/>download page]
+    CF[Cloudflare Workers<br/>download page]
     GM[Gmail SMTP]
     UR[UptimeRobot]
 
@@ -103,7 +103,7 @@ All services run on free plans.
 |---|---|---|
 | **Render** | Hosts the API | Free web service `sti-evoter-api` in Singapore, built from the `Dockerfile` via `render.yaml`. Redeploys automatically on every push to the backend's `master` branch. Provides HTTPS. Settings (database URL, keys, email) are environment variables in Render. |
 | **Neon** | PostgreSQL database | Serverless PostgreSQL 18 in AWS Singapore, branch `production`. Sleeps after about 5 minutes without queries and wakes on the next one. Holds all data, uploaded photos (`StoredFiles`) and encryption keys (`DataProtectionKeys`). |
-| **Netlify** | Download page | Publishes `download-site/` from this repo on every push (`netlify.toml`). Sets security headers. |
+| **Cloudflare Workers** | Download page | Publishes `download-site/` from `master` on every push (`wrangler.jsonc`). Sets security headers with `download-site/_headers`. |
 | **GitHub Releases** | App files | Each release (`v1.0.8` and so on) holds the APK, the Windows zip and `version.json` with versions, sizes and SHA-256 hashes. The API reads `version.json` from the newest release. |
 | **Gmail** | Email | SMTP at `smtp.gmail.com:587`, authenticated with an App Password for `stilegazpievoter@gmail.com`. Sends season passwords and admin sign-in codes. The API logs sent-message timestamps and enforces a maximum of 500 messages per rolling 24 hours. |
 | **UptimeRobot** | Keep-awake | Calls `/api/health` every 5 minutes so the free Render service does not sleep. It does not touch the database, so Neon can still sleep. |
@@ -142,11 +142,13 @@ sti_legazpi_evoter/
 │                                 candidate cards, vote stepper, cropper, update dialog
 ├── assets/                       Logo (also the app icon)
 ├── android/  windows/            Platform projects (iOS, macOS, Linux, web exist but are not shipped)
-├── download-site/                Netlify landing page (index.html, styles.css, app.js, history.js)
+├── download-site/                Cloudflare landing page (index.html, styles.css, app.js, history.js)
 ├── scripts/
 │   ├── build_release.ps1         Builds APK + Windows zip, checks them, publishes a GitHub release
 │   └── create_keystore.ps1       One-time Android signing key
-├── netlify.toml                  Netlify settings
+├── wrangler.jsonc                Cloudflare static-assets deployment settings
+├── CLOUDFLARE-DEPLOY.md          Cloudflare deployment and Render CORS setup
+├── netlify.toml                  Legacy Netlify fallback settings
 ├── README.md                     User guide, releasing, update history
 └── DOCUMENTATION.md              This file
 ```
@@ -228,14 +230,14 @@ sti_legazpi_evoter_backend/
 | Nov 15 – 17 | Season passwords, password management, deleting and resetting history |
 | Nov 20 – 22 | Super admin and admin roles, candidate photos with cropping |
 | Nov 23 | Dark mode, school years, active/inactive students, party lists with colors and logos, ranked positions |
-| Nov 24 | Production setup: Docker, in-app updates, Netlify download page |
+| Nov 24 | Production setup: Docker, in-app updates, initial Netlify download page |
 | Nov 25 | Hosting on Render + Neon, email through Mailjet, GitHub Releases. Versions 1.0.0 to 1.0.8: app icon, seasons on the sign-in screen, range calendar, locked open seasons, season-bound sign-in, automatic housekeeping, landscape layouts, student editing |
 | Nov 27 | Switched backend email configuration to Gmail SMTP with App Passwords and persistent 500-message rolling-window tracking |
 
 **Approach**
 - **UI first.** The screens were designed and tested with sample data before the server existed, so the flows could be tried early. The state class still lives in `lib/data/mock.dart` from that stage, though it now talks to the API.
 - **Rules on the server.** Once the API was added, every check (one vote, open season, eligibility, locking) moved to the server so the app cannot be used to cheat.
-- **Low-cost hosting by design.** Render, Neon, Netlify and GitHub Releases have free options. Gmail SMTP requires a host that allows port 587; Render's free plan does not, so email requires a paid Render instance or a different host (see section 3).
+- **Low-cost hosting by design.** Render, Neon, Cloudflare Workers and GitHub Releases have free options. Gmail API sends over HTTPS, so it works from Render without opening SMTP ports.
 - **Small, frequent releases.** Each change is pushed and released through one script; installed apps update themselves from the sign-in screen.
 
 The full list of changes per version is in the **Update history** in [README.md](README.md) and on the download page.

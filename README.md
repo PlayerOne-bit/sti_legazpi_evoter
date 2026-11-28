@@ -2,7 +2,7 @@
 
 A voting app for student elections at STI College Legazpi, for **Android** and **Windows**. Students vote from their own phone or a school PC during a voting season. Admins run seasons, candidates and voter lists, and get the results the moment a season closes.
 
-- **Download:** https://sti-legazpi-evoter.netlify.app
+- **Download page:** Cloudflare Worker `sti-legazpi-evoter` (see [CLOUDFLARE-DEPLOY.md](CLOUDFLARE-DEPLOY.md) for its assigned URL).
 - **Tech stack, structure and services:** [DOCUMENTATION.md](DOCUMENTATION.md)
 - **Server and maintenance:** see the backend repo, [`sti_legazpi_evoter_backend`](https://github.com/PlayerOne-bit/sti_legazpi_evoter_backend)
 
@@ -50,7 +50,8 @@ flutter run -d windows --dart-define=API_URL=https://sti-evoter-api.onrender.com
 | `lib/widgets/` | Shared pieces: season cards, the date range calendar, candidate cards, the update dialog. |
 | `lib/data/` | `api.dart` (server calls and clock sync), `mock.dart` (app state and models), `app_update.dart` (self-update), `excel_io.dart`. |
 | `scripts/` | `build_release.ps1` and `create_keystore.ps1`. |
-| `download-site/` | The download page published on Netlify. |
+| `download-site/` | The Cloudflare-hosted download page and release history. |
+| `wrangler.jsonc` | Deploys `download-site/` as Cloudflare Worker static assets. |
 | `assets/` | The logo, also used for the app icon (`dart run flutter_launcher_icons` after changing it). |
 
 ## Releasing a new version
@@ -71,7 +72,7 @@ Each release:
    .\scripts\build_release.ps1 -ApiUrl https://sti-evoter-api.onrender.com -Notes "What changed" -GitHubRelease
    ```
    This builds the APK and Windows zip, checks the Windows app opens, writes `version.json` with sizes and SHA-256 hashes, and publishes GitHub release `v1.0.6`.
-5. Commit and push. Netlify republishes the download page, and within 5 minutes installed apps show **Update**.
+5. Commit and push. Cloudflare republishes the download page from `master`; within 5 minutes installed apps show **Update**.
 
 Add `-Mandatory` to force everyone to update. Always build both platforms, because the app only reads the newest release. To pull a bad release, delete it on GitHub; the one before becomes the newest again.
 

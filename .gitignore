@@ -52,3 +52,5 @@ app.*.map.json
 *.jks
 *.keystore
 /dist/
+.wrangler/
+.dev.vars*
