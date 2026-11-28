@@ -83,7 +83,10 @@ class ExcelIo {
   static Future<String> saveResults(int electionId, String fileName) =>
       save('/api/admin/elections/$electionId/export', fileName);
 
-  static Future<ImportResult?> pickAndImport({int? electionId}) async {
+  /// [modernShs] turns Grade 11 and 12 strands into modern tracks while importing:
+  /// ABM, ASSH, BE, STEM and HUMSS become ACAD; MAWD and ICT become TECH.
+  static Future<ImportResult?> pickAndImport(
+      {int? electionId, bool modernShs = false}) async {
     final file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: const ['xls', 'xlsx'],
@@ -96,8 +99,11 @@ class ExcelIo {
       return const ImportResult(0, 0, ['The file could not be read.']);
     }
 
-    final uri = Uri.parse(
-        '${Api.baseUrl}/api/admin/excel/import${electionId == null ? '' : '?electionId=$electionId'}');
+    final uri = Uri.parse('${Api.baseUrl}/api/admin/excel/import')
+        .replace(queryParameters: {
+      if (electionId != null) 'electionId': '$electionId',
+      'shsTrack': modernShs ? 'modern' : 'traditional',
+    });
     final req = http.MultipartRequest('POST', uri)
       ..headers.addAll(_auth)
       ..files.add(

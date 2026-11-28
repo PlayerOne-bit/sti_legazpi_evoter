@@ -23,6 +23,31 @@ class Program {
   const Program(this.id, this.code, this.name);
 }
 
+/// Grade 7 to 10 are always JHS. Grade 11 and 12 use a traditional strand or a
+/// modern track (ACAD, TECH). Every other code is a tertiary program.
+class SchoolPrograms {
+  static const traditional = {
+    'ABM',
+    'ASSH',
+    'BE',
+    'STEM',
+    'HUMSS',
+    'MAWD',
+    'ICT'
+  };
+  static const modern = {'ACAD', 'TECH'};
+  static bool isTraditional(String code) =>
+      traditional.contains(code.toUpperCase());
+  static bool isModern(String code) => modern.contains(code.toUpperCase());
+  static bool isBasicEd(String code) =>
+      code.toUpperCase() == 'JHS' || isTraditional(code) || isModern(code);
+  static bool isSeniorLevel(GradeLevel g) {
+    if (g.tertiary) return false;
+    final n = int.tryParse(g.name.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    return n >= 11;
+  }
+}
+
 const _palette = [
   Color(0xFF0A4DA2),
   Color(0xFFB4501E),

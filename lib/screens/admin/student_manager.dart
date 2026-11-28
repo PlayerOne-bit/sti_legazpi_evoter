@@ -56,13 +56,68 @@ class _StudentManagerPageState extends State<StudentManagerPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
+  /// Asks how Grade 11 and 12 strands in the file are saved. Null means cancelled.
+  Future<bool?> _askShsTrack() {
+    var modern = false;
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: const Text('Import students'),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Grade 11 and 12 track'),
+                const SizedBox(height: 8),
+                SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment(value: false, label: Text('Traditional')),
+                    ButtonSegment(value: true, label: Text('Modern')),
+                  ],
+                  selected: {modern},
+                  onSelectionChanged: (v) => setS(() => modern = v.first),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  modern
+                      ? 'Strands become modern tracks: ABM, ASSH, BE, STEM and HUMSS '
+                          'are saved as ACAD (Academic Track); MAWD and ICT as TECH '
+                          '(Technical-Professional Track).'
+                      : 'Strands are saved as written in the PROGRAM column '
+                          '(ABM, ASSH, BE, STEM, HUMSS, MAWD, ICT).',
+                  style: const TextStyle(fontSize: 12.5),
+                ),
+                const SizedBox(height: 8),
+                const Text('Grade 7 to 10 students are saved as JHS.',
+                    style: TextStyle(fontSize: 12.5)),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel')),
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx, modern),
+                child: const Text('Choose file')),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _excel(_ExcelAction action) async {
     if (busy) return;
     setState(() => busy = true);
     try {
       switch (action) {
         case _ExcelAction.importFile:
-          final result = await ExcelIo.pickAndImport();
+          final modern = await _askShsTrack();
+          if (modern == null) return;
+          final result = await ExcelIo.pickAndImport(modernShs: modern);
           if (result != null) {
             await state.refreshAdmin();
             if (mounted) await showImportResult(context, result);

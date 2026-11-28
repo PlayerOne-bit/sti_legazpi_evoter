@@ -2,6 +2,16 @@
 // Small fix releases are grouped with the version they came with. Keep in step with README.md.
 window.EVOTER_HISTORY = [
   {
+    versions: "1.1.1",
+    date: "November 29, 2026",
+    title: "Senior high strands and tracks",
+    changes: [
+      "Grade 11 and 12 students get a Traditional strand or a Modern track (ACAD or TECH), picked with a toggle when adding a student.",
+      "Excel import can convert strands to modern tracks: ABM, ASSH, BE, STEM and HUMSS become ACAD; MAWD and ICT become TECH.",
+      "Grade 7 to 10 students are saved as JHS, and import files may write levels as plain numbers like 11."
+    ]
+  },
+  {
     versions: "1.1.0",
     date: "November 29, 2026",
     title: "Season reminders and public results",

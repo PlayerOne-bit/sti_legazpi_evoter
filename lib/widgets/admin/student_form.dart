@@ -39,6 +39,30 @@ Future<void> showStudentForm(BuildContext context, {Student? existing}) async {
 
   bool isTertiary(int id) =>
       state.gradeLevels.firstWhere((g) => g.id == id).tertiary;
+  bool isSenior(int id) => SchoolPrograms.isSeniorLevel(
+      state.gradeLevels.firstWhere((g) => g.id == id));
+  bool isJunior(int id) => !isTertiary(id) && !isSenior(id);
+
+  // Grade 11 and 12: traditional strands (ABM, STEM, ...) or modern tracks (ACAD, TECH).
+  bool modern = SchoolPrograms.isModern(
+      state.programs.where((p) => p.id == programId).firstOrNull?.code ?? '');
+  List<Program> choices() => [
+        for (final p in state.programs)
+          if (isTertiary(grade)
+              ? !SchoolPrograms.isBasicEd(p.code)
+              : isSenior(grade) &&
+                  (modern
+                      ? SchoolPrograms.isModern(p.code)
+                      : SchoolPrograms.isTraditional(p.code)))
+            p,
+      ];
+  void keepValidProgram() {
+    if (isJunior(grade) || !choices().any((p) => p.id == programId)) {
+      programId = null;
+    }
+  }
+
+  keepValidProgram();
 
   await showDialog<void>(
     context: context,
@@ -109,7 +133,7 @@ Future<void> showStudentForm(BuildContext context, {Student? existing}) async {
                   ],
                   onChanged: (v) => setS(() {
                     grade = v!;
-                    if (!isTertiary(grade)) programId = null;
+                    keepValidProgram();
                   }),
                 ),
                 const SizedBox(height: 12),
@@ -120,18 +144,47 @@ Future<void> showStudentForm(BuildContext context, {Student? existing}) async {
                       labelText: 'Section (optional)',
                       hintText: 'For example 1Y1 or ST. JOHN'),
                 ),
-                if (isTertiary(grade)) ...[
+                if (isJunior(grade)) ...[
                   const SizedBox(height: 12),
-                  if (state.programs.isEmpty)
-                    const Text(
-                        'No programs yet. Add programs first, then add this student.')
+                  const InputDecorator(
+                    decoration: InputDecoration(labelText: 'Program'),
+                    child: Text('JHS, Junior High School'),
+                  ),
+                ],
+                if (isSenior(grade)) ...[
+                  const SizedBox(height: 14),
+                  const Text('Senior high track',
+                      style: TextStyle(fontSize: 12.5)),
+                  const SizedBox(height: 6),
+                  SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment(value: false, label: Text('Traditional')),
+                      ButtonSegment(value: true, label: Text('Modern')),
+                    ],
+                    selected: {modern},
+                    onSelectionChanged: (v) => setS(() {
+                      modern = v.first;
+                      keepValidProgram();
+                    }),
+                  ),
+                ],
+                if (!isJunior(grade)) ...[
+                  const SizedBox(height: 12),
+                  if (choices().isEmpty)
+                    Text(isSenior(grade)
+                        ? 'No ${modern ? 'modern tracks' : 'strands'} yet. Add them under Programs first.'
+                        : 'No programs yet. Add programs first, then add this student.')
                   else
                     DropdownButtonFormField<int>(
+                      key: ValueKey('program-$grade-$modern'),
                       initialValue: programId,
                       isExpanded: true,
-                      decoration: const InputDecoration(labelText: 'Program'),
+                      decoration: InputDecoration(
+                          labelText: isSenior(grade)
+                              ? (modern ? 'Track' : 'Strand')
+                              : 'Program'),
                       items: [
-                        for (final p in state.programs)
+                        for (final p in choices())
                           DropdownMenuItem(
                             value: p.id,
                             child: Text('${p.code}, ${p.name}',
@@ -187,9 +240,10 @@ Future<void> showStudentForm(BuildContext context, {Student? existing}) async {
                       setS(() => error = 'Enter the last name and first name.');
                       return;
                     }
-                    if (isTertiary(grade) && programId == null) {
-                      setS(() =>
-                          error = 'Pick a program for tertiary students.');
+                    if (!isJunior(grade) && programId == null) {
+                      setS(() => error = isSenior(grade)
+                          ? 'Pick a ${modern ? 'track' : 'strand'} for Grade 11 and 12 students.'
+                          : 'Pick a program for tertiary students.');
                       return;
                     }
                     setS(() {

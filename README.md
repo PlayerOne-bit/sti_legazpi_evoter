@@ -27,7 +27,7 @@ Sign in with **Admin** on the sign-in screen.
 | **Candidates** | Candidates for a season, with photos (cropped square) and party lists. Positions are created from **Add candidate** by choosing **New position**; each position can be renamed, re-ranked or deleted from its own menu. Editable until voting starts. |
 | **Party lists** | Names, colors and logos. |
 | **Voters** | The season's voter list with a password for each student. Send passwords by email one at a time or all at once, make a new password, or export the list to Excel. |
-| **Students** | Add students by hand or import from Excel, mark them inactive (graduated, transferred and so on), filter by school year and grade level. When a new school year starts (June), last year's students become inactive automatically. Importing them again (same student number, or same name with a new number) updates their school year, level and section and makes them active again. Student numbers and full names must be unique; people may share a first, middle or last name. The super admin can also edit a student's details. |
+| **Students** | Add students by hand or import from Excel, mark them inactive (graduated, transferred and so on), filter by school year and grade level. When a new school year starts (June), last year's students become inactive automatically. Importing them again (same student number, or same name with a new number) updates their school year, level and section and makes them active again. Student numbers and full names must be unique; people may share a first, middle or last name. The super admin can also edit a student's details. Grade 7 to 10 students are always JHS. Grade 11 and 12 students pick a **Traditional** strand (ABM, ASSH, BE, STEM, HUMSS, MAWD, ICT) or a **Modern** track (ACAD, TECH); the Excel import asks which one to use and can convert strands to tracks. |
 | **History** | Closed seasons with winners and polls. **Run again** copies a season's setup into a new one. |
 | **Admins** | The super admin adds and removes other admins, and can turn on two-step sign-in by email. |
 
@@ -79,6 +79,11 @@ Add `-Mandatory` to force everyone to update. Always build both platforms, becau
 ## Update history
 
 Small fixes are grouped with the version they came with.
+
+### 1.1.1 · November 29, 2026
+- Grade 11 and 12 students have a Traditional strand or a Modern track (ACAD or TECH), chosen with a toggle when adding or editing a student.
+- The Excel import asks for the Grade 11 and 12 track. With Modern, ABM, ASSH, BE, STEM and HUMSS become ACAD, and MAWD and ICT become TECH.
+- Grade 7 to 10 students are saved as JHS. Levels can be written as plain numbers like 11 in the import file.
 
 ### 1.1.0 · November 29, 2026
 - Student reminders for 72, 48 and 24 hours before voting starts, plus an opening notice.
