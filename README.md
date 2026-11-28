@@ -9,9 +9,10 @@ A voting app for student elections at STI College Legazpi, for **Android** and *
 ## For students
 
 1. **Get the app** from the download page and sign in with your **student number** and the **season password**. The password is emailed to `lastname.XXXXXX@legazpi.sti.edu.ph` or given by your adviser. Signing in opens only the season that password belongs to.
-2. **Check what's on:** the sign-in screen shows seasons voting now and coming up, with countdowns.
+2. **Check what's on:** the sign-in screen shows seasons voting now and coming up, with countdowns. Open **Election results history** there to see announced winners.
 3. **Vote:** pick one candidate per position, review your choices, then submit. You can vote once per season, and only while it is open.
-4. **See the results** after the season is closed and tallied.
+4. **Get reminders:** in-app notices are timed for 72, 48 and 24 hours before a season opens, and at opening. They appear while the app is open or when it is reopened; they are not operating-system push notifications while the app is closed.
+5. **See the results** after the season is closed and tallied. A candidate cannot vote in the season where they are running.
 
 Each season has its own password, so last season's password does not work for the next one.
 
@@ -77,6 +78,12 @@ Add `-Mandatory` to force everyone to update. Always build both platforms, becau
 ## Update history
 
 Small fixes are grouped with the version they came with.
+
+### 1.1.0 · November 29, 2026
+- Student reminders for 72, 48 and 24 hours before voting starts, plus an opening notice.
+- Announced winners appear in the sign-in screen's results history and as an in-app results notice.
+- Students running as candidates are blocked from voting in that season.
+- Student dashboards focus on seasons that have candidates.
 
 ### 1.0.9 · November 27, 2026
 - Season voter list shows password-email progress, the number remaining, and students without a valid school email.

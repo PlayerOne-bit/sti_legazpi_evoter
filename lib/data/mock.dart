@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'api.dart';
 
 class Position {
@@ -257,6 +258,56 @@ class SeasonWinner {
   const SeasonWinner(this.position, this.name, this.partyList, this.votes);
 }
 
+class PublicResult {
+  final int electionId;
+  final String club;
+  final String schoolYear;
+  final DateTime closedAt;
+  final List<SeasonWinner> winners;
+  const PublicResult(
+      this.electionId, this.club, this.schoolYear, this.closedAt, this.winners);
+  factory PublicResult.fromJson(Map<String, dynamic> j) => PublicResult(
+        j['electionId'],
+        j['club'],
+        j['schoolYear'],
+        parseUtc(j['closedAt']),
+        [
+          for (final w in j['winners'])
+            SeasonWinner(w['position'], personName(w['name']),
+                partyLabel(w['partyList']), w['voteCount'])
+        ],
+      );
+}
+
+class StudentNotice {
+  final String id;
+  final DateTime scheduledAt;
+  final String kind;
+  final String title;
+  final String message;
+  final int electionId;
+  final String club;
+  final String schoolYear;
+  final List<SeasonWinner> winners;
+  const StudentNotice(this.id, this.scheduledAt, this.kind, this.title,
+      this.message, this.electionId, this.club, this.schoolYear, this.winners);
+  factory StudentNotice.fromJson(Map<String, dynamic> j) => StudentNotice(
+        j['id'],
+        parseUtc(j['scheduledAt']),
+        j['kind'],
+        j['title'],
+        j['message'],
+        j['electionId'],
+        j['club'],
+        j['schoolYear'],
+        [
+          for (final w in (j['winners'] ?? []))
+            SeasonWinner(w['position'], personName(w['name']),
+                partyLabel(w['partyList']), w['voteCount'])
+        ],
+      );
+}
+
 class Season {
   final int id;
   final int electionId;
@@ -368,6 +419,8 @@ class AppState extends ChangeNotifier {
   ClientElection? homeNext;
   bool homeWaiting = false;
   bool hasVoted = false;
+  bool isCandidate = false;
+  List<StudentNotice> studentNotices = [];
   int? ballotElectionId;
   List<Position> positions = [];
   List<Candidate> candidates = [];
@@ -390,6 +443,7 @@ class AppState extends ChangeNotifier {
       homeNext = _clientElection(j['next']);
       homeWaiting = j['waitingForTally'] as bool;
       hasVoted = j['hasVoted'] as bool;
+      isCandidate = j['isCandidate'] == true;
       final cid = j['candidatesElectionId'] as int?;
       if (cid != null) {
         await loadBallot(cid);
@@ -400,10 +454,49 @@ class AppState extends ChangeNotifier {
       }
       homeLoaded = true;
       homeError = null;
+      await loadStudentNotices();
     } on ApiException catch (e) {
       homeError = e.message;
     }
     notifyListeners();
+  }
+
+  Future<void> loadStudentNotices() async {
+    try {
+      final rows = await Api.get('/api/client/notifications') as List;
+      studentNotices = [
+        for (final row in rows)
+          StudentNotice.fromJson(row as Map<String, dynamic>)
+      ];
+    } on ApiException {
+      studentNotices = [];
+    }
+    notifyListeners();
+  }
+
+  Future<List<PublicResult>> fetchPublicHistory() async {
+    final rows = await Api.get('/api/seasons/public/history') as List;
+    return [
+      for (final row in rows) PublicResult.fromJson(row as Map<String, dynamic>)
+    ];
+  }
+
+  Future<Set<String>> unseenStudentNotices() async {
+    final prefs = await SharedPreferences.getInstance();
+    final seen =
+        prefs.getStringList('student_notice_seen_${me?.id}')?.toSet() ?? {};
+    return studentNotices
+        .map((n) => n.id)
+        .where((id) => !seen.contains(id))
+        .toSet();
+  }
+
+  Future<void> markStudentNoticesSeen(Iterable<String> ids) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'student_notice_seen_${me?.id}';
+    final seen = prefs.getStringList(key)?.toSet() ?? {};
+    seen.addAll(ids);
+    await prefs.setStringList(key, seen.toList());
   }
 
   Future<void> loadBallot(int electionId) async {
@@ -1036,6 +1129,8 @@ class AppState extends ChangeNotifier {
     homeError = null;
     homeActive = homeOpenForOthers = homeNext = null;
     homeWaiting = hasVoted = false;
+    isCandidate = false;
+    studentNotices = [];
     ballotElectionId = null;
     positions = [];
     candidates = [];

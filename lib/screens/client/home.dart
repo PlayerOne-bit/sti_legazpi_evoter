@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../data/api.dart';
 import '../../widgets/anim.dart';
 import '../../widgets/brand_app_bar.dart';
 import '../../data/mock.dart';
@@ -28,11 +30,89 @@ class ClientHome extends StatefulWidget {
   State<ClientHome> createState() => _ClientHomeState();
 }
 
-class _ClientHomeState extends State<ClientHome> {
+class _ClientHomeState extends State<ClientHome> with WidgetsBindingObserver {
+  Timer? _noticeTimer;
+  bool _showingNotices = false;
+
   @override
   void initState() {
     super.initState();
-    state.loadHome();
+    WidgetsBinding.instance.addObserver(this);
+    state.loadHome().then((_) => _checkNotices());
+    _noticeTimer =
+        Timer.periodic(const Duration(minutes: 1), (_) => _checkNotices());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState lifecycleState) {
+    if (lifecycleState == AppLifecycleState.resumed) _checkNotices();
+  }
+
+  Future<void> _checkNotices() async {
+    if (!mounted || _showingNotices || Api.token == null) return;
+    await state.loadStudentNotices();
+    if (!mounted) return;
+    final unseen = await state.unseenStudentNotices();
+    final notices =
+        state.studentNotices.where((n) => unseen.contains(n.id)).toList();
+    if (!mounted || notices.isEmpty) return;
+    _showingNotices = true;
+    try {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          icon: Icon(
+              notices.any((n) => n.kind == 'results')
+                  ? Icons.emoji_events
+                  : Icons.notifications_active_outlined,
+              color: C.blue,
+              size: 32),
+          title: Text(
+              notices.length == 1 ? notices.first.title : 'Election updates'),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 460, maxHeight: 480),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final notice in notices) ...[
+                    Text(notice.message,
+                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                    if (notice.winners.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      for (final winner in notice.winners)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Text(
+                              '${winner.position}: ${winner.name} · ${winner.partyList} (${winner.votes} votes)'),
+                        ),
+                    ],
+                    if (notice != notices.last) const Divider(height: 24),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            FilledButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Got it')),
+          ],
+        ),
+      );
+      await state.markStudentNoticesSeen(notices.map((n) => n.id));
+    } finally {
+      _showingNotices = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _noticeTimer?.cancel();
+    super.dispose();
   }
 
   void _signOut(BuildContext context) {
@@ -150,6 +230,13 @@ class _ClientHomeState extends State<ClientHome> {
                             ),
                           ],
                         ),
+                      )
+                    else if (state.isCandidate)
+                      const _Notice(
+                        icon: Icons.workspace_premium_outlined,
+                        title: 'You are a candidate in this season',
+                        body:
+                            'Candidates cannot vote in the season they are running in.',
                       )
                     else
                       BlueButton(

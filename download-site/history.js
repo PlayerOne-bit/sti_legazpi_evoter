@@ -2,6 +2,17 @@
 // Small fix releases are grouped with the version they came with. Keep in step with README.md.
 window.EVOTER_HISTORY = [
   {
+    versions: "1.1.0",
+    date: "November 29, 2026",
+    title: "Season reminders and public results",
+    changes: [
+      "Receive in-app reminders 72, 48 and 24 hours before voting starts, plus an announcement when voting opens.",
+      "See finalized election results when they are announced, including from the sign-in screen history.",
+      "Candidates cannot vote in the season they are running in.",
+      "Student dashboards focus on seasons that have candidates."
+    ]
+  },
+  {
     versions: "1.0.9",
     date: "November 27, 2026",
     title: "Season email progress",

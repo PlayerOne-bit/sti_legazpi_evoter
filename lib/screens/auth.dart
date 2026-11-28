@@ -177,6 +177,91 @@ class _AuthPageState extends State<AuthPage> {
     }
   }
 
+  Future<void> _showHistory() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * .78,
+          child: Column(
+            children: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(20, 8, 20, 14),
+                child: Row(children: [
+                  Icon(Icons.emoji_events_outlined, color: C.blue),
+                  SizedBox(width: 10),
+                  Text('Election results history',
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                ]),
+              ),
+              Expanded(
+                child: FutureBuilder<List<PublicResult>>(
+                  future: state.fetchPublicHistory(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.done)
+                      return const Center(child: CircularProgressIndicator());
+                    if (snapshot.hasError)
+                      return Center(
+                          child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Text(
+                                  'Could not load results. Check your connection and try again.',
+                                  textAlign: TextAlign.center)));
+                    final results = snapshot.data ?? [];
+                    if (results.isEmpty)
+                      return const Center(
+                          child: Text('No announced results yet.'));
+                    return ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                      itemCount: results.length,
+                      itemBuilder: (context, index) {
+                        final result = results[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: ExpansionTile(
+                            leading: const CircleAvatar(
+                                child: Icon(Icons.emoji_events_outlined)),
+                            title: Text(result.club,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w800)),
+                            subtitle: Text(
+                                '${result.schoolYear} · Results announced ${fmtDate(result.closedAt)}'),
+                            children: [
+                              if (result.winners.isEmpty)
+                                const ListTile(
+                                    title: Text(
+                                        'No winner details were published.')),
+                              for (final winner in result.winners)
+                                ListTile(
+                                  dense: true,
+                                  leading: Icon(
+                                      Icons.workspace_premium_outlined,
+                                      color: C.blue),
+                                  title: Text(winner.position,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w700)),
+                                  subtitle: Text(
+                                      '${winner.name} · ${winner.partyList}'),
+                                  trailing: Text('${winner.votes}'),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _backToPassword() => setState(() {
         _challenge = null;
         _code.clear();
@@ -343,6 +428,17 @@ class _AuthPageState extends State<AuthPage> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Material(
+              color: C.surface,
+              shape: const CircleBorder(),
+              elevation: 2,
+              child: IconButton(
+                tooltip: 'Election results history',
+                onPressed: _showHistory,
+                icon: Icon(Icons.history, color: C.blue),
+              ),
+            ),
+            const SizedBox(width: 8),
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
               transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
