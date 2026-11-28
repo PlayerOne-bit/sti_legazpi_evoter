@@ -121,31 +121,68 @@ class AppUpdater {
     final appDir = File(exe).parent.path;
     final staging = '${zip.parent.path}\\staging';
     final script = File('${zip.parent.path}\\apply_update.ps1');
+    final log = '${zip.parent.path}\\update.log';
     script.writeAsStringSync('''
 \$ErrorActionPreference = 'Stop'
-Wait-Process -Id $pid -ErrorAction SilentlyContinue
-Start-Sleep -Milliseconds 500
-if (Test-Path ${q(staging)}) { Remove-Item ${q(staging)} -Recurse -Force }
-Expand-Archive -Path ${q(zip.path)} -DestinationPath ${q(staging)} -Force
-for (\$i = 0; \$i -lt 10; \$i++) {
-  try { Copy-Item -Path (Join-Path ${q(staging)} '*') -Destination ${q(appDir)} -Recurse -Force; break }
-  catch { Start-Sleep -Seconds 1 }
+\$log = ${q(log)}
+\$appDir = ${q(appDir)}
+function Write-Log(\$text) { Add-Content -Path \$log -Value ("{0:u}  {1}" -f (Get-Date), \$text) }
+try {
+  Write-Log 'Waiting for the app to close'
+  Wait-Process -Id $pid -ErrorAction SilentlyContinue
+  Start-Sleep -Milliseconds 500
+  if (Test-Path ${q(staging)}) { Remove-Item ${q(staging)} -Recurse -Force }
+  Expand-Archive -Path ${q(zip.path)} -DestinationPath ${q(staging)} -Force
+  \$copied = \$false
+  for (\$i = 0; \$i -lt 20 -and -not \$copied; \$i++) {
+    try {
+      Copy-Item -Path (Join-Path ${q(staging)} '*') -Destination ${q(appDir)} -Recurse -Force
+      \$copied = \$true
+    } catch {
+      Write-Log "Copy attempt \$(\$i + 1) failed: \$(\$_.Exception.Message)"
+      Start-Sleep -Seconds 1
+    }
+  }
+  if (-not \$copied) { throw "Could not replace the files in \$appDir. Check that this folder is not read-only." }
+  Write-Log 'Update installed'
+} catch {
+  Write-Log "Update failed: \$(\$_.Exception.Message)"
+  Add-Type -AssemblyName PresentationFramework
+  [System.Windows.MessageBox]::Show(
+    "STI eVoter could not install the update.`n`n\$(\$_.Exception.Message)`n`nClose the app and try again, or download the new version from the download page and extract it over the old folder.",
+    'STI eVoter update') | Out-Null
 }
 Start-Process -FilePath ${q(exe)}
 ''');
-    await Process.start(
-      'powershell',
-      [
-        '-NoProfile',
-        '-ExecutionPolicy',
-        'Bypass',
-        '-WindowStyle',
-        'Hidden',
-        '-File',
-        script.path,
-      ],
-      mode: ProcessStartMode.detached,
-    );
+    // Start the updater through WMI so it is not tied to this app: a child started
+    // directly can be killed together with the app when it exits below.
+    final command = 'powershell.exe -NoProfile -ExecutionPolicy Bypass '
+        '-WindowStyle Hidden -File "${script.path}"';
+    final launcher = await Process.run('powershell', [
+      '-NoProfile',
+      '-ExecutionPolicy',
+      'Bypass',
+      '-Command',
+      "\$r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create "
+          "-Arguments @{CommandLine=${q(command)}}; exit [int]\$r.ReturnValue",
+    ]);
+    if (launcher.exitCode != 0) {
+      // WMI is unavailable; fall back to a detached child.
+      await Process.start(
+        'powershell',
+        [
+          '-NoProfile',
+          '-ExecutionPolicy',
+          'Bypass',
+          '-WindowStyle',
+          'Hidden',
+          '-File',
+          script.path,
+        ],
+        mode: ProcessStartMode.detached,
+      );
+      await Future<void>.delayed(const Duration(seconds: 2));
+    }
     exit(0);
   }
 }

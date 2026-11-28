@@ -80,10 +80,11 @@ Add `-Mandatory` to force everyone to update. Always build both platforms, becau
 
 Small fixes are grouped with the version they came with.
 
-### 1.1.1 · November 29, 2026
+### 1.1.1 – 1.1.2 · November 29, 2026
 - Grade 11 and 12 students have a Traditional strand or a Modern track (ACAD or TECH), chosen with a toggle when adding or editing a student.
 - The Excel import asks for the Grade 11 and 12 track. With Modern, ABM, ASSH, BE, STEM and HUMSS become ACAD, and MAWD and ICT become TECH.
 - Grade 7 to 10 students are saved as JHS. Levels can be written as plain numbers like 11 in the import file.
+- Windows in-app updates now install. Before 1.1.2, the updater was stopped when the app closed, so the app stayed on the old version. Windows users on 1.1.1 or older must download 1.1.2 from the download page once and extract it over the old folder; later updates install from the app. If an update cannot replace the files, a message now says so.
 
 ### 1.1.0 · November 29, 2026
 - Student reminders for 72, 48 and 24 hours before voting starts, plus an opening notice.
