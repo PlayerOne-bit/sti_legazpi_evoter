@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../data/api.dart';
 import '../data/app_update.dart';
 import '../data/mock.dart';
@@ -43,7 +44,7 @@ class _AuthPageState extends State<AuthPage> {
     AppUpdater.current().then((info) {
       if (mounted) setState(() => _installed = info.version);
     }).catchError((_) {});
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkUpdate());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkStartup());
   }
 
   Widget _versionLabel(bool onBlue) => IgnorePointer(
@@ -67,6 +68,69 @@ class _AuthPageState extends State<AuthPage> {
       _version = current.version;
     });
     await _openUpdate();
+  }
+
+  Future<void> _checkStartup() async {
+    await _checkUpdate();
+    if (mounted) await _checkResultAnnouncements();
+  }
+
+  Future<void> _checkResultAnnouncements() async {
+    List<PublicResult> results;
+    try {
+      results = await state.fetchPublicHistory();
+    } catch (_) {
+      return;
+    }
+    if (!mounted || results.isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    const key = 'public_results_seen';
+    final seen = prefs.getStringList(key)?.toSet() ?? <String>{};
+    final unseen = results
+        .where((result) => !seen.contains('${result.electionId}'))
+        .toList();
+    if (!mounted || unseen.isEmpty) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: Icon(Icons.emoji_events_outlined, color: C.blue, size: 34),
+        title: Text(unseen.length == 1
+            ? 'Election results announced'
+            : 'New election results'),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460, maxHeight: 440),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final result in unseen) ...[
+                  Text('${result.club} · ${result.schoolYear}',
+                      style: const TextStyle(fontWeight: FontWeight.w800)),
+                  Text('Results announced ${fmtDate(result.closedAt)}',
+                      style: TextStyle(color: C.muted, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  for (final winner in result.winners)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 5),
+                      child: Text(
+                          '${winner.position}: ${winner.name} · ${winner.partyList} (${winner.votes} votes)'),
+                    ),
+                  if (result != unseen.last) const Divider(height: 22),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          FilledButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Got it')),
+        ],
+      ),
+    );
+    seen.addAll(unseen.map((result) => '${result.electionId}'));
+    await prefs.setStringList(key, seen.toList());
   }
 
   Future<void> _openUpdate() async {
